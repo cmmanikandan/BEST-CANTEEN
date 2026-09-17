@@ -8,7 +8,7 @@ import { Search, X, TrendingUp, History } from 'lucide-react';
 
 function CustomerSearchContent() {
   const searchParams = useSearchParams();
-  const initialQuery = searchParams.get('q') || '';
+  const initialQuery = searchParams?.get('q') || '';
 
   const { foods } = useCanteen();
   const [query, setQuery] = useState(initialQuery);

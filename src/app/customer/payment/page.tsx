@@ -13,8 +13,8 @@ import confetti from 'canvas-confetti';
 function CustomerPaymentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const orderId = searchParams.get('orderId') || '';
-  const amount = searchParams.get('amount') || '0';
+  const orderId = searchParams?.get('orderId') || '';
+  const amount = searchParams?.get('amount') || '0';
 
   const { user, isLoaded } = useAuth();
   const { orders, verifyPayment } = useCanteen();
@@ -68,6 +68,7 @@ function CustomerPaymentContent() {
     };
 
     setCompletedOrder(targetOrder);
+    setShowQrModal(true);
     setIsProcessing(false);
     setPaymentStatus('SUCCESS');
 
@@ -266,7 +267,7 @@ function CustomerPaymentContent() {
 
           {/* Fullscreen Modal */}
           <QrTokenModal
-            order={completedOrder}
+            order={showQrModal ? completedOrder : null}
             onClose={() => setShowQrModal(false)}
           />
         </div>

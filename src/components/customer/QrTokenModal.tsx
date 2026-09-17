@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { Order } from '@/types';
 import { QRCodeSVG } from 'qrcode.react';
 import { X, CheckCircle2, Clock, ShieldCheck } from 'lucide-react';
-import { BrandLogo } from '@/components/common/BrandLogo';
 
 interface QrTokenModalProps {
   order: Order | null;
@@ -27,20 +26,17 @@ export function QrTokenModal({ order, onClose }: QrTokenModalProps) {
         className="bg-white rounded-3xl max-w-sm w-full p-4 sm:p-5 text-center space-y-3 shadow-2xl relative border border-stone-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top Header Bar - snug at top with zero blank space */}
-        <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-          <BrandLogo size="sm" />
-          <button
-            onClick={onClose}
-            className="p-1 rounded-full text-stone-400 hover:text-[#201611] hover:bg-stone-100 transition"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+        {/* Close Button - absolute top right with no blank top bar */}
+        <button
+          onClick={onClose}
+          className="absolute top-3.5 right-3.5 p-1.5 rounded-full text-stone-400 hover:text-[#201611] hover:bg-stone-100 transition z-10"
+          aria-label="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
 
         {/* Token Header */}
-        <div>
+        <div className="pt-1">
           <p className="text-[10px] font-extrabold text-[#FF5722] uppercase tracking-wider">
             Digital Food Token
           </p>

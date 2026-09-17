@@ -7,7 +7,7 @@ import { ShieldX, Home, LogIn } from 'lucide-react';
 
 function AccessDeniedContent() {
   const params = useSearchParams();
-  const from = params.get('from') || '';
+  const from = params?.get('from') || '';
 
   const isAdmin = from.startsWith('/admin');
   const isServer = from.startsWith('/server');

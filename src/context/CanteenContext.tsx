@@ -598,9 +598,20 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
 
   // Duplicate QR protection & Order Serving
   const serveOrder = (tokenOrId: string, serverName = 'Canteen Staff') => {
-    const cleanToken = tokenOrId.trim();
+    let cleanToken = (tokenOrId || '').trim();
+    if (cleanToken.includes('/orders/')) {
+      const match = cleanToken.match(/\/orders\/([A-Za-z0-9_-]+)/);
+      if (match && match[1]) {
+        cleanToken = match[1];
+      }
+    }
+    const cleanId = cleanToken.replace(/^#/, '').trim();
     const order = orders.find(
-      (o) => o.id.toUpperCase() === cleanToken.toUpperCase() || o.qrToken === cleanToken
+      (o) =>
+        o.id.toUpperCase() === cleanId.toUpperCase() ||
+        o.id.toUpperCase() === cleanToken.toUpperCase() ||
+        o.qrToken === cleanToken ||
+        o.qrToken === tokenOrId.trim()
     );
 
     if (!order) {

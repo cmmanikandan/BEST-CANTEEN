@@ -20,6 +20,7 @@ import {
   LayoutDashboard,
   ArrowRight,
   Sparkles,
+  X,
 } from 'lucide-react';
 
 export default function CustomerProfilePage() {
@@ -226,13 +227,26 @@ export default function CustomerProfilePage() {
 
       {/* ── LOGOUT CONFIRMATION MODAL ── */}
       {showLogoutModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-xl text-center">
-            <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto">
-              <LogOut className="w-6 h-6" />
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn"
+          onClick={() => setShowLogoutModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-sm w-full p-5 space-y-3 shadow-xl text-center relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowLogoutModal(false)}
+              className="absolute top-3.5 right-3.5 p-1 rounded-full text-stone-400 hover:text-stone-600 transition"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="w-11 h-11 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto">
+              <LogOut className="w-5 h-5" />
             </div>
-            <div className="space-y-1">
-              <h3 className="text-lg font-bold text-[#201611]">Confirm Logout</h3>
+            <div className="space-y-0.5">
+              <h3 className="text-base font-bold text-[#201611]">Confirm Logout</h3>
               <p className="text-xs text-stone-500">
                 Are you sure you want to end your session?
               </p>

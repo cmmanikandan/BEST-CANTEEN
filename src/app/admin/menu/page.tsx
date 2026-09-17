@@ -566,10 +566,23 @@ export default function AdminMenuPage() {
 
       {/* ── CONFIRM DELETE POPUP CARD ── */}
       {deletingFood && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-stone-200 text-center space-y-4 animate-scaleUp">
-            <div className="w-14 h-14 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-inner">
-              <Trash2 className="w-7 h-7" />
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setDeletingFood(null)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-sm w-full p-5 sm:p-6 shadow-2xl border border-stone-200 text-center space-y-3.5 animate-scaleUp relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setDeletingFood(null)}
+              className="absolute top-3.5 right-3.5 p-1 rounded-full text-stone-400 hover:text-stone-600 transition"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-inner">
+              <Trash2 className="w-6 h-6" />
             </div>
 
             <div className="space-y-1.5">

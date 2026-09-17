@@ -60,6 +60,7 @@ export default function CustomerCheckoutPage() {
 
       clearCart();
       setCompletedOrder(verified || newOrder);
+      setShowQrModal(true);
       setIsProcessing(false);
 
       try {
@@ -176,7 +177,7 @@ export default function CustomerCheckoutPage() {
 
         {/* Fullscreen QR Token Modal */}
         <QrTokenModal
-          order={completedOrder}
+          order={showQrModal ? completedOrder : null}
           onClose={() => setShowQrModal(false)}
         />
       </div>

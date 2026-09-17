@@ -89,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem('bc_custom_user', JSON.stringify(parsed));
         } else {
           setRole(savedRole);
+          setCookie('bc_user_role', savedRole);
         }
         setUser(parsed);
       } else {
