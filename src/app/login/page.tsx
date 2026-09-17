@@ -26,7 +26,9 @@ function LoginContent() {
 
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<UserRole>(currentRole || 'customer');
+  const [selectedRole, setSelectedRole] = useState<'customer' | 'server'>(
+    currentRole === 'server' ? 'server' : 'customer'
+  );
 
   // Login inputs (Clean, empty by default — NO demo data)
   const [identifier, setIdentifier] = useState('');
@@ -56,7 +58,7 @@ function LoginContent() {
   const [wizardAvatar, setWizardAvatar] = useState(AVATAR_OPTIONS[0]);
 
   // Quick switch role
-  const handleRoleChange = (role: UserRole) => {
+  const handleRoleChange = (role: 'customer' | 'server') => {
     setSelectedRole(role);
     setLoginError(null);
     setIdentifier('');
@@ -102,13 +104,14 @@ function LoginContent() {
     }
 
     const dest =
-      selectedRole === 'customer'
-        ? '/customer/home'
+      result.user?.role === 'admin'
+        ? '/admin/dashboard'
         : selectedRole === 'server'
         ? '/server/dashboard'
-        : '/admin/dashboard';
+        : '/customer/home';
 
     const displayName =
+      result.user?.name ||
       (identifier.split('@')[0] || 'User')
         .replace(/[._-]/g, ' ')
         .replace(/\b\w/g, (c) => c.toUpperCase());
@@ -154,7 +157,11 @@ function LoginContent() {
 
     if (res.success && res.user) {
       // Real Google user authenticated!
-      triggerSplashScreenAndRedirect('/customer/home', res.user.name);
+      if (res.user.role === 'admin') {
+        triggerSplashScreenAndRedirect('/admin/dashboard', res.user.name || 'Manikandan Prabhu');
+      } else {
+        triggerSplashScreenAndRedirect('/customer/home', res.user.name);
+      }
     } else {
       // If Firebase Google provider is not yet enabled in Firebase console,
       // or popup was blocked, show real error and allow typing their Google account email
@@ -186,10 +193,16 @@ function LoginContent() {
       return;
     }
 
-    const finalName = wizardName.trim() || wizardEmail.split('@')[0];
+    const trimmedEmail = wizardEmail.trim().toLowerCase();
+    const finalName = wizardName.trim() || trimmedEmail.split('@')[0];
     loginWithGoogleProfile(wizardEmail, finalName, wizardAvatar);
     setShowGoogleWizard(false);
-    triggerSplashScreenAndRedirect('/customer/home', finalName);
+
+    if (trimmedEmail === 'manikandanprabhu37@gmail.com') {
+      triggerSplashScreenAndRedirect('/admin/dashboard', finalName);
+    } else {
+      triggerSplashScreenAndRedirect('/customer/home', finalName);
+    }
   };
 
   return (
@@ -247,7 +260,7 @@ function LoginContent() {
             </p>
           </div>
 
-          {/* Segmented Role Selector */}
+          {/* Segmented Role Selector (Only Customer & Staff) */}
           <div className="bg-[#F7F3EA] p-1 rounded-2xl flex items-center mb-4 border border-stone-200/60">
             <button
               type="button"
@@ -270,17 +283,6 @@ function LoginContent() {
               }`}
             >
               Staff
-            </button>
-            <button
-              type="button"
-              onClick={() => handleRoleChange('admin')}
-              className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all ${
-                selectedRole === 'admin'
-                  ? 'bg-[#FF5722] text-white shadow-sm'
-                  : 'text-[#5C4E46] hover:text-[#201611]'
-              }`}
-            >
-              Admin
             </button>
           </div>
 
@@ -323,7 +325,7 @@ function LoginContent() {
             <form onSubmit={handleLogin} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-semibold text-[#3D2E26] mb-1">
-                  {selectedRole === 'customer' ? 'Email or Mobile' : 'Staff / Admin Email'}
+                  {selectedRole === 'customer' ? 'Email or Mobile' : 'Staff Email'}
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">

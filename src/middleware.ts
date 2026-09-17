@@ -12,7 +12,7 @@ export function middleware(request: NextRequest) {
   const role = request.cookies.get('bc_user_role')?.value;
 
   // ── Admin protection ──
-  if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
+  if (pathname.startsWith('/admin')) {
     if (role !== 'admin') {
       const url = request.nextUrl.clone();
       url.pathname = '/access-denied';

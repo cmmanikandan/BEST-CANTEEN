@@ -64,6 +64,12 @@ export function mapOrderToDb(order: Order) {
 
 // Helper: Database Food to App FoodItem
 export function mapFoodFromDb(row: any): FoodItem {
+  const cat = (row.category || 'lunch') as MealCategory;
+  const rawMeals = Array.isArray(row.available_meals) ? row.available_meals : [];
+  const availableMeals = rawMeals.length > 0
+    ? (rawMeals.includes(cat) ? rawMeals : [...rawMeals, cat])
+    : [cat, 'snacks'];
+
   return {
     id: row.id,
     name: row.name,
@@ -73,11 +79,11 @@ export function mapFoodFromDb(row: any): FoodItem {
     originalPrice: row.original_price ? Number(row.original_price) : undefined,
     rating: Number(row.rating) || 4.8,
     ratingCount: Number(row.rating_count) || 120,
-    category: row.category as MealCategory,
-    availableMeals: Array.isArray(row.available_meals) ? row.available_meals : [],
+    category: cat,
+    availableMeals,
     imageUrl: row.image_url || '/logo.png',
-    isAvailable: Boolean(row.is_available),
-    isVisible: Boolean(row.is_visible),
+    isAvailable: row.is_available !== false,
+    isVisible: row.is_visible !== false,
     isVeg: Boolean(row.is_veg),
     isPopular: Boolean(row.is_popular),
     calories: row.calories || undefined,
@@ -88,6 +94,11 @@ export function mapFoodFromDb(row: any): FoodItem {
 
 // Helper: App FoodItem to Database Record
 export function mapFoodToDb(food: FoodItem) {
+  const cat = food.category || 'lunch';
+  const availableMeals = Array.isArray(food.availableMeals) && food.availableMeals.length > 0
+    ? (food.availableMeals.includes(cat) ? food.availableMeals : [...food.availableMeals, cat])
+    : [cat, 'snacks'];
+
   return {
     id: food.id,
     name: food.name,
@@ -97,11 +108,11 @@ export function mapFoodToDb(food: FoodItem) {
     original_price: food.originalPrice || null,
     rating: food.rating,
     rating_count: food.ratingCount,
-    category: food.category,
-    available_meals: food.availableMeals,
+    category: cat,
+    available_meals: availableMeals,
     image_url: food.imageUrl,
-    is_available: food.isAvailable,
-    is_visible: food.isVisible,
+    is_available: food.isAvailable ?? true,
+    is_visible: food.isVisible ?? true,
     is_veg: food.isVeg,
     is_popular: food.isPopular ?? false,
     calories: food.calories || null,

@@ -41,11 +41,11 @@ function AccessDeniedContent() {
         <div className="flex flex-col gap-2">
           {isAdmin && (
             <Link
-              href="/admin/login"
+              href="/login?redirect=/admin/dashboard"
               className="flex items-center justify-center gap-2 py-2.5 bg-[#FF5722] text-white font-bold text-xs rounded-xl"
             >
               <LogIn className="w-4 h-4" />
-              Go to Admin Login
+              Go to Login
             </Link>
           )}
           {isServer && (

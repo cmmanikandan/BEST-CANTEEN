@@ -32,7 +32,11 @@ export default function CustomerMenuPage() {
     return foods
       .filter((food) => {
         if (!food.isVisible) return false;
-        if (selectedCategory !== 'all' && !food.availableMeals.includes(selectedCategory)) return false;
+        const matchCat =
+          selectedCategory === 'all' ||
+          food.category === selectedCategory ||
+          (Array.isArray(food.availableMeals) && food.availableMeals.includes(selectedCategory));
+        if (!matchCat) return false;
         if (vegOnly && !food.isVeg) return false;
         if (availableOnly && !food.isAvailable) return false;
         if (

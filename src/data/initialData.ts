@@ -305,8 +305,8 @@ export const DEMO_SERVER: ServerUser = {
 
 export const DEMO_ADMIN: AdminUser = {
   id: 'no2L4yONk3RjjFTnY9O5OkiDqbv1',
-  name: 'Canteen Admin',
-  email: 'admin@bestcanteen.in',
+  name: 'Manikandan Prabhu',
+  email: 'manikandanprabhu37@gmail.com',
   role: 'admin',
 };
 

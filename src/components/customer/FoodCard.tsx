@@ -19,26 +19,13 @@ export function FoodCard({ food }: FoodCardProps) {
   const router = useRouter();
   const { user } = useAuth();
   const { addToCart, updateQuantity, getItemQuantity } = useCart();
-  const { favorites, toggleFavorite, mealSchedules, effectiveTime } = useCanteen();
+  const { favorites, toggleFavorite } = useCanteen();
 
   const quantity = getItemQuantity(food.id);
   const isFav = favorites.includes(food.id);
 
-  // Check if meal category is currently open
-  const isCategoryOpen = React.useMemo(() => {
-    if (food.category === 'snacks') return true;
-    const sched = mealSchedules.find((s) => s.id === food.category);
-    if (!sched || !sched.isActive) return false;
-    if (sched.isAllDay) return true;
-    const currentMins = effectiveTime.getHours() * 60 + effectiveTime.getMinutes();
-    const [sh, sm] = (sched.startTime || '00:00').split(':').map(Number);
-    const [eh, em] = (sched.endTime || '23:59').split(':').map(Number);
-    const start = (sh || 0) * 60 + (sm || 0);
-    const end = (eh || 0) * 60 + (em || 0);
-    return currentMins >= start && currentMins < end;
-  }, [food.category, mealSchedules, effectiveTime]);
-
-  const isClosed = !isCategoryOpen || !food.isAvailable;
+  // Availability is strictly determined by food.isAvailable set by Admin in panel
+  const isClosed = !food.isAvailable;
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();

@@ -17,7 +17,7 @@ import {
 
 // Credential registry per role for demo & fallback
 const CREDENTIALS: Record<string, { email: string; password: string; role: UserRole }> = {
-  'admin-priya': { email: 'canteen.admin@college.edu', password: 'admin123', role: 'admin' },
+  'admin-mani': { email: 'manikandanprabhu37@gmail.com', password: 'admin123', role: 'admin' },
   'server-ramesh': { email: 'ramesh@bestcanteen.in', password: 'server123', role: 'server' },
   'server-mani': { email: 'mani@bestcanteen.in', password: 'server456', role: 'server' },
   'customer-hari': { email: 'hari.s@college.edu', password: 'canteen123', role: 'customer' },
@@ -30,8 +30,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loginAs: (role: UserRole, customUser?: CustomerUser | ServerUser | AdminUser) => void;
   updateCustomerProfile: (profile: Partial<CustomerUser>) => void;
-  login: (role: UserRole, identifier: string, pass: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithGoogle: (requestedRole?: UserRole) => Promise<{ success: boolean; user?: CustomerUser; error?: string }>;
+  login: (role: UserRole, identifier: string, pass: string) => Promise<{ success: boolean; user?: CustomerUser | ServerUser | AdminUser; error?: string }>;
+  loginWithGoogle: (requestedRole?: UserRole) => Promise<{ success: boolean; user?: CustomerUser | ServerUser | AdminUser; error?: string }>;
   loginWithGoogleProfile: (googleEmail: string, googleName: string, avatarUrl?: string) => void;
   signup: (
     requestedRole: UserRole,
@@ -58,6 +58,7 @@ function removeCookie(name: string) {
 }
 
 export const ADMIN_UIDS = ['no2L4yONk3RjjFTnY9O5OkiDqbv1'];
+export const ADMIN_EMAILS = ['manikandanprabhu37@gmail.com'];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<UserRole>('customer');
@@ -70,10 +71,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const savedRole = localStorage.getItem('bc_user_role') as UserRole;
       const savedCustomUser = localStorage.getItem('bc_custom_user');
       if (savedRole && savedCustomUser) {
-        setRole(savedRole);
         const parsed = JSON.parse(savedCustomUser);
-        if (parsed.id && ADMIN_UIDS.includes(parsed.id)) {
+        const emailLower = (parsed.email || '').toLowerCase();
+        if (
+          (parsed.id && ADMIN_UIDS.includes(parsed.id)) ||
+          (emailLower && ADMIN_EMAILS.includes(emailLower))
+        ) {
           setRole('admin');
+          parsed.role = 'admin';
+          if (!parsed.email || parsed.email.includes('admin@') || parsed.email.includes('canteen.admin')) {
+            parsed.email = 'manikandanprabhu37@gmail.com';
+          }
+          setCookie('bc_user_role', 'admin');
+          localStorage.setItem('bc_user_role', 'admin');
+          localStorage.setItem('bc_custom_user', JSON.stringify(parsed));
+        } else {
+          setRole(savedRole);
         }
         setUser(parsed);
       } else {
@@ -90,13 +103,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
-        // Recognize configured Admin UID
-        if (ADMIN_UIDS.includes(fbUser.uid)) {
-          const adminName = fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'Canteen Administrator');
+        const emailLower = (fbUser.email || '').toLowerCase();
+        const isAdmin = ADMIN_UIDS.includes(fbUser.uid) || (emailLower && ADMIN_EMAILS.includes(emailLower));
+
+        // Recognize configured Admin UID or Email
+        if (isAdmin) {
+          const adminName = fbUser.displayName || 'Manikandan Prabhu';
+          const adminEmail = fbUser.email || 'manikandanprabhu37@gmail.com';
           const adminUser: AdminUser = {
             id: fbUser.uid,
             name: adminName,
-            email: fbUser.email || '',
+            email: adminEmail,
             role: 'admin',
             avatarUrl: fbUser.photoURL || undefined,
           };
@@ -128,11 +145,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loginAs = (newRole: UserRole, customUser?: CustomerUser | ServerUser | AdminUser) => {
-    setRole(newRole);
-    if (customUser) {
-      setUser(customUser);
+    let finalUser = customUser;
+    if (finalUser) {
+      const userEmail = 'email' in finalUser && typeof (finalUser as any).email === 'string' ? (finalUser as any).email : '';
+      const emailLower = userEmail.toLowerCase();
+      if (
+        finalUser.role === 'admin' ||
+        (finalUser.id && ADMIN_UIDS.includes(finalUser.id)) ||
+        (emailLower && ADMIN_EMAILS.includes(emailLower))
+      ) {
+        finalUser.role = 'admin';
+        if (!userEmail || userEmail.includes('admin@') || userEmail.includes('canteen.admin')) {
+          (finalUser as AdminUser).email = 'manikandanprabhu37@gmail.com';
+        }
+      }
+      setUser(finalUser);
       try {
-        localStorage.setItem('bc_custom_user', JSON.stringify(customUser));
+        localStorage.setItem('bc_custom_user', JSON.stringify(finalUser));
       } catch {}
     } else {
       if (newRole === 'customer') {
@@ -143,6 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(DEMO_ADMIN);
       }
     }
+    setRole(newRole);
     try {
       localStorage.setItem('bc_user_role', newRole);
       setCookie('bc_user_role', newRole);
@@ -174,7 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     requestedRole: UserRole,
     identifier: string,
     pass: string,
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; user?: CustomerUser | ServerUser | AdminUser; error?: string }> => {
     const email = identifier.trim().toLowerCase();
     const password = pass.trim();
 
@@ -189,17 +219,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const fbUser = userCredential.user;
       setFirebaseUser(fbUser);
 
-      if (ADMIN_UIDS.includes(fbUser.uid)) {
-        const adminName = fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'Canteen Administrator');
+      const emailLower = (fbUser.email || email).toLowerCase();
+      const isAdmin = ADMIN_UIDS.includes(fbUser.uid) || ADMIN_EMAILS.includes(emailLower);
+
+      if (isAdmin) {
+        const adminName = fbUser.displayName || 'Manikandan Prabhu';
+        const adminEmail = fbUser.email || email || 'manikandanprabhu37@gmail.com';
         const adminUser: AdminUser = {
           id: fbUser.uid,
           name: adminName,
-          email: fbUser.email || email,
+          email: adminEmail,
           role: 'admin',
           avatarUrl: fbUser.photoURL || undefined,
         };
         loginAs('admin', adminUser);
-        return { success: true };
+        return { success: true, user: adminUser };
       }
 
       if (requestedRole === 'customer') {
@@ -212,6 +246,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           avatarUrl: fbUser.photoURL || undefined,
         };
         loginAs('customer', customerUser);
+        return { success: true, user: customerUser };
       } else if (requestedRole === 'server') {
         const serverUser: ServerUser = {
           id: fbUser.uid,
@@ -220,14 +255,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: 'server',
         };
         loginAs('server', serverUser);
+        return { success: true, user: serverUser };
       } else if (requestedRole === 'admin') {
         const adminUser: AdminUser = {
           id: fbUser.uid,
-          name: fbUser.displayName || 'Canteen Manager',
-          email: fbUser.email || email,
+          name: fbUser.displayName || 'Manikandan Prabhu',
+          email: fbUser.email || email || 'manikandanprabhu37@gmail.com',
           role: 'admin',
         };
         loginAs('admin', adminUser);
+        return { success: true, user: adminUser };
       }
 
       return { success: true };
@@ -261,8 +298,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (matched) {
-        if (matched.role !== requestedRole) {
-          const friendlyRole = matched.role === 'admin' ? 'Admin' : matched.role === 'server' ? 'Counter Staff' : 'Customer';
+        if (matched.role === 'admin' || ADMIN_EMAILS.includes(matched.email.toLowerCase())) {
+          const adminUser: AdminUser = {
+            id: 'no2L4yONk3RjjFTnY9O5OkiDqbv1',
+            name: 'Manikandan Prabhu',
+            email: 'manikandanprabhu37@gmail.com',
+            role: 'admin',
+          };
+          loginAs('admin', adminUser);
+          return { success: true, user: adminUser };
+        }
+
+        if ((matched.role as string) !== requestedRole) {
+          const friendlyRole = matched.role === 'server' ? 'Counter Staff' : 'Customer';
           return {
             success: false,
             error: `These credentials belong to a ${friendlyRole} account. Please select the ${friendlyRole} tab above.`,
@@ -277,7 +325,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 ? 'Customer User'
                 : matched.role === 'server'
                 ? 'Counter Staff'
-                : 'Canteen Administrator';
+                : 'Manikandan Prabhu';
             updateProfile(cred.user, { displayName }).catch(() => {});
           })
           .catch(() => {});
@@ -302,23 +350,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const loginWithGoogle = async (
     requestedRole: UserRole = 'customer'
-  ): Promise<{ success: boolean; user?: CustomerUser; error?: string }> => {
+  ): Promise<{ success: boolean; user?: CustomerUser | ServerUser | AdminUser; error?: string }> => {
     try {
       const result = await signInWithPopup(auth, googleAuthProvider);
       const fbUser = result.user;
       setFirebaseUser(fbUser);
 
-      if (ADMIN_UIDS.includes(fbUser.uid)) {
-        const adminName = fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'Canteen Administrator');
+      const emailLower = (fbUser.email || '').toLowerCase();
+      const isAdmin = ADMIN_UIDS.includes(fbUser.uid) || (emailLower && ADMIN_EMAILS.includes(emailLower));
+
+      if (isAdmin) {
+        const adminName = fbUser.displayName || 'Manikandan Prabhu';
+        const adminEmail = fbUser.email || 'manikandanprabhu37@gmail.com';
         const adminUser: AdminUser = {
           id: fbUser.uid,
           name: adminName,
-          email: fbUser.email || '',
+          email: adminEmail,
           role: 'admin',
           avatarUrl: fbUser.photoURL || undefined,
         };
         loginAs('admin', adminUser);
-        return { success: true, user: adminUser as any };
+        return { success: true, user: adminUser };
       }
 
       const customerUser: CustomerUser = {
@@ -359,11 +411,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const trimmedEmail = googleEmail.trim().toLowerCase();
     const trimmedName = googleName.trim() || trimmedEmail.split('@')[0];
 
-    if (trimmedEmail.includes('admin') || trimmedEmail === 'admin@bestcanteen.in') {
+    if (ADMIN_EMAILS.includes(trimmedEmail) || trimmedEmail === 'manikandanprabhu37@gmail.com') {
       const adminUser: AdminUser = {
         id: 'no2L4yONk3RjjFTnY9O5OkiDqbv1',
-        name: trimmedName || 'Canteen Administrator',
-        email: trimmedEmail,
+        name: trimmedName || 'Manikandan Prabhu',
+        email: 'manikandanprabhu37@gmail.com',
         role: 'admin',
         avatarUrl: avatarUrl || undefined,
       };
