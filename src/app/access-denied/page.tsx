@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ShieldX, Home, LogIn } from 'lucide-react';
 
-export default function AccessDeniedPage() {
+function AccessDeniedContent() {
   const params = useSearchParams();
   const from = params.get('from') || '';
 
@@ -67,5 +67,13 @@ export default function AccessDeniedPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AccessDeniedPage() {
+  return (
+    <React.Suspense fallback={<div className="min-h-screen bg-[#F7F5F0] flex items-center justify-center p-6 text-stone-400 font-semibold text-sm">Loading...</div>}>
+      <AccessDeniedContent />
+    </React.Suspense>
   );
 }

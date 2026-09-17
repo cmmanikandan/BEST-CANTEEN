@@ -10,7 +10,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { QrTokenModal } from '@/components/customer/QrTokenModal';
 import confetti from 'canvas-confetti';
 
-export default function CustomerPaymentPage() {
+function CustomerPaymentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get('orderId') || '';
@@ -517,5 +517,13 @@ export default function CustomerPaymentPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CustomerPaymentPage() {
+  return (
+    <React.Suspense fallback={<div className="min-h-screen bg-[#F7F5F0] flex items-center justify-center text-stone-400 font-semibold text-sm">Preparing payment...</div>}>
+      <CustomerPaymentContent />
+    </React.Suspense>
   );
 }

@@ -6,7 +6,7 @@ import { useCanteen } from '@/context/CanteenContext';
 import { FoodCard } from '@/components/customer/FoodCard';
 import { Search, X, TrendingUp, History } from 'lucide-react';
 
-export default function CustomerSearchPage() {
+function CustomerSearchContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
 
@@ -134,5 +134,13 @@ export default function CustomerSearchPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CustomerSearchPage() {
+  return (
+    <React.Suspense fallback={<div className="max-w-7xl mx-auto px-4 py-8 text-stone-400 font-semibold text-sm">Loading search...</div>}>
+      <CustomerSearchContent />
+    </React.Suspense>
   );
 }
