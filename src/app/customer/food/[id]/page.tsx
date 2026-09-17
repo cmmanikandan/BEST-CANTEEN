@@ -103,10 +103,11 @@ export default function FoodDetailsPage() {
         {/* Left: Large Food Photo */}
         <div className="relative w-full aspect-[4/3] md:aspect-square rounded-3xl overflow-hidden bg-stone-100 shadow-sm border border-stone-200/80">
           <Image
-            src={food.imageUrl}
+            src={food.imageUrl || '/logo.png'}
             alt={food.name}
             fill
             priority
+            unoptimized
             className="object-cover"
           />
 

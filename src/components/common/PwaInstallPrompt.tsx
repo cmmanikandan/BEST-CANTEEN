@@ -81,8 +81,8 @@ export function PwaInstallPrompt() {
   return (
     <div className="fixed bottom-20 md:bottom-6 right-4 left-4 sm:left-auto sm:right-6 z-50 max-w-sm animate-slideUp">
       <div className="bg-[#201611] text-white p-4 rounded-3xl shadow-2xl border border-stone-700/80 flex items-center gap-3.5 backdrop-blur-md">
-        <div className="relative w-11 h-11 rounded-2xl overflow-hidden shrink-0 bg-stone-900 border border-stone-800">
-          <Image src="/logo-icon.png" alt="Best Canteen" fill className="object-contain p-1" />
+        <div className="relative w-11 h-11 rounded-2xl overflow-hidden shrink-0 bg-white border border-stone-200 shadow-sm">
+          <Image src="/pwa-icon-192.png" alt="Best Canteen" fill className="object-contain p-0.5" />
         </div>
 
         <div className="flex-1 min-w-0">

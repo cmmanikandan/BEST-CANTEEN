@@ -82,6 +82,7 @@ export interface AdminUser {
   name: string;
   email: string;
   role: 'admin';
+  avatarUrl?: string;
 }
 
 export interface CustomerUser {

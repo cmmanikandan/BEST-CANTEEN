@@ -38,6 +38,7 @@ export default function AdminMenuPage() {
   const [filterCategory, setFilterCategory] = useState<MealCategory | 'all'>('all');
   const [showModal, setShowModal] = useState(false);
   const [editingFood, setEditingFood] = useState<FoodItem | null>(null);
+  const [deletingFood, setDeletingFood] = useState<FoodItem | null>(null);
 
   // Form state
   const [name, setName] = useState('');
@@ -240,7 +241,13 @@ export default function AdminMenuPage() {
                   <td className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-stone-100 shrink-0 border border-stone-200">
-                        <Image src={food.imageUrl} alt={food.name} fill className="object-cover" />
+                        <Image
+                          src={food.imageUrl || '/logo.png'}
+                          alt={food.name}
+                          fill
+                          unoptimized
+                          className="object-cover"
+                        />
                       </div>
                       <div>
                         <p className="font-bold text-sm text-[#201611]">{food.name}</p>
@@ -286,12 +293,14 @@ export default function AdminMenuPage() {
                       <button
                         onClick={() => openEdit(food)}
                         className="p-1.5 rounded-lg text-stone-600 hover:text-[#FF5722] hover:bg-orange-50 transition"
+                        title="Edit dish"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => { if (confirm(`Delete ${food.name}?`)) deleteFoodItem(food.id); }}
+                        onClick={() => setDeletingFood(food)}
                         className="p-1.5 rounded-lg text-stone-400 hover:text-red-600 hover:bg-red-50 transition"
+                        title="Delete dish"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -313,7 +322,13 @@ export default function AdminMenuPage() {
           <div key={food.id} className={`bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs space-y-3 ${!food.isAvailable ? 'opacity-60 grayscale' : ''}`}>
             <div className="flex items-center gap-3">
               <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-stone-100 shrink-0 border border-stone-200">
-                <Image src={food.imageUrl} alt={food.name} fill className="object-cover" />
+                <Image
+                  src={food.imageUrl || '/logo.png'}
+                  alt={food.name}
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-sm text-[#201611] truncate">{food.name}</p>
@@ -326,10 +341,10 @@ export default function AdminMenuPage() {
                 </span>
               </div>
               <div className="flex flex-col gap-2 items-end">
-                <button onClick={() => openEdit(food)} className="p-1.5 rounded-xl bg-stone-100 text-stone-600 hover:text-[#FF5722]">
+                <button onClick={() => openEdit(food)} className="p-1.5 rounded-xl bg-stone-100 text-stone-600 hover:text-[#FF5722]" title="Edit dish">
                   <Edit2 className="w-3.5 h-3.5" />
                 </button>
-                <button onClick={() => { if (confirm(`Delete ${food.name}?`)) deleteFoodItem(food.id); }} className="p-1.5 rounded-xl bg-stone-100 text-red-400">
+                <button onClick={() => setDeletingFood(food)} className="p-1.5 rounded-xl bg-stone-100 text-red-400 hover:text-red-600 hover:bg-red-50 transition" title="Delete dish">
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -419,8 +434,8 @@ export default function AdminMenuPage() {
                     <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                   </div>
                   {imagePreview && (
-                    <div className="mt-2 relative w-16 h-16 rounded-xl overflow-hidden border border-stone-200">
-                      <Image src={imagePreview} alt="preview" fill className="object-cover" />
+                    <div className="mt-2 relative w-16 h-16 rounded-xl overflow-hidden border border-stone-200 bg-stone-100">
+                      <Image src={imagePreview || '/logo.png'} alt="preview" fill unoptimized className="object-cover" />
                     </div>
                   )}
                 </div>
@@ -544,6 +559,63 @@ export default function AdminMenuPage() {
               </button>
 
               <p className="text-[10px] text-stone-400 text-center">Accepted: .json files only</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CONFIRM DELETE POPUP CARD ── */}
+      {deletingFood && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-stone-200 text-center space-y-4 animate-scaleUp">
+            <div className="w-14 h-14 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-inner">
+              <Trash2 className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="font-black text-lg text-[#201611]">Confirm Delete Dish</h3>
+              <p className="text-xs text-stone-500 leading-relaxed">
+                Are you sure you want to permanently remove <span className="font-extrabold text-[#201611]">&quot;{deletingFood.name}&quot;</span> from the menu?
+              </p>
+            </div>
+
+            {/* Dish Preview Snippet */}
+            <div className="flex items-center gap-3 p-3 bg-stone-50 rounded-2xl border border-stone-200 text-left">
+              <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-stone-200 shrink-0 border border-stone-300">
+                <Image
+                  src={deletingFood.imageUrl || '/logo.png'}
+                  alt={deletingFood.name}
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-xs text-[#201611] truncate">{deletingFood.name}</p>
+                <p className="text-[11px] text-[#FF5722] font-black">₹{deletingFood.price}</p>
+                <p className="text-[10px] text-stone-400 capitalize">{deletingFood.category}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingFood(null)}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-stone-200 text-stone-700 font-bold text-xs hover:bg-stone-50 transition active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  deleteFoodItem(deletingFood.id);
+                  setDeletingFood(null);
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-xs shadow-md shadow-red-500/20 transition active:scale-95 flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Confirm Delete</span>
+              </button>
             </div>
           </div>
         </div>

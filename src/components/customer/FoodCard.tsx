@@ -101,9 +101,10 @@ export function FoodCard({ food }: FoodCardProps) {
         {/* Food Image Container */}
         <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-stone-100 mb-3">
           <Image
-            src={food.imageUrl}
+            src={food.imageUrl || '/logo.png'}
             alt={food.name}
             fill
+            unoptimized
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className={`object-cover transition-transform duration-300 ${
               isClosed ? 'grayscale contrast-75' : 'group-hover:scale-105'

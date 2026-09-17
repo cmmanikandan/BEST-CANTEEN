@@ -211,7 +211,7 @@ export default function CustomerCheckoutPage() {
         </h2>
         <div className="flex items-center justify-between text-xs sm:text-sm">
           <div>
-            <p className="font-bold text-[#201611]">{user?.name || 'Hariharan S.'}</p>
+            <p className="font-bold text-[#201611]">{user?.name || 'Customer'}</p>
             <p className="text-[#5C4E46] text-xs">{('phone' in (user || {})) ? (user as any).phone : '+91 98765 43210'}</p>
           </div>
           <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">

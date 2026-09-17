@@ -304,9 +304,9 @@ export const DEMO_SERVER: ServerUser = {
 };
 
 export const DEMO_ADMIN: AdminUser = {
-  id: 'admin-priya',
-  name: 'Priya Narayanan (Canteen Manager)',
-  email: 'canteen.admin@college.edu',
+  id: 'no2L4yONk3RjjFTnY9O5OkiDqbv1',
+  name: 'Canteen Admin',
+  email: 'admin@bestcanteen.in',
   role: 'admin',
 };
 

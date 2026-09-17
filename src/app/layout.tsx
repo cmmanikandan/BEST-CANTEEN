@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   description: 'Digital campus canteen ordering platform with instant Razorpay payments, smart meal timing, and digital QR tokens.',
   manifest: '/manifest.json',
   icons: {
-    icon: '/logo-icon.png',
-    apple: '/logo-icon.png',
+    icon: '/pwa-icon-192.png',
+    apple: '/apple-touch-icon.png',
   },
 };
 

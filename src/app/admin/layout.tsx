@@ -26,7 +26,7 @@ const NAV_LINKS = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -186,7 +186,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Link>
           </div>
           <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-xs font-semibold text-stone-600">Admin: Priya Narayanan</span>
+            <span className="hidden sm:block text-xs font-semibold text-stone-600">Admin: {user?.name || 'Administrator'}</span>
             <span className="w-2 h-2 rounded-full bg-[#16A34A]" />
           </div>
         </header>

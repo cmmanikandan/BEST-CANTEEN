@@ -5,16 +5,25 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
+import { useAuth } from '@/context/AuthContext';
+
 export default function SplashScreen() {
   const router = useRouter();
+  const { user } = useAuth();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.push('/customer/home');
-    }, 2000);
+      if (user) {
+        if (user.role === 'admin') router.push('/admin/dashboard');
+        else if (user.role === 'server') router.push('/server/dashboard');
+        else router.push('/customer/home');
+      } else {
+        router.push('/');
+      }
+    }, 1600);
 
     return () => clearTimeout(timer);
-  }, [router]);
+  }, [router, user]);
 
   return (
     <div

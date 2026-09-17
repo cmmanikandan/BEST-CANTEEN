@@ -21,7 +21,6 @@ export function TopNavigation() {
     role === 'admin' ||
     user?.role === 'admin' ||
     (user && 'id' in user && ADMIN_UIDS.includes(user.id)) ||
-    (user && 'email' in user && user.email === 'canteen.admin@college.edu') ||
     (typeof window !== 'undefined' && localStorage.getItem('bc_user_role') === 'admin');
 
 
@@ -129,16 +128,21 @@ export function TopNavigation() {
               className="flex items-center gap-2 pl-1 group"
               aria-label="Profile"
             >
-              <div className="relative w-8 h-8 rounded-full ring-2 ring-stone-200 overflow-hidden group-hover:ring-[#FF5722] transition">
-                <Image
-                  src={
-                    ('avatarUrl' in user && user.avatarUrl) ||
-                    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
-                  }
-                  alt="Profile"
-                  fill
-                  className="object-cover"
-                />
+              <div className="relative w-8 h-8 rounded-full ring-2 ring-stone-200 overflow-hidden group-hover:ring-[#FF5722] transition bg-stone-100 flex items-center justify-center">
+                {('avatarUrl' in user && user.avatarUrl) ? (
+                  <Image
+                    src={user.avatarUrl}
+                    alt="Profile"
+                    fill
+                    referrerPolicy="no-referrer"
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  <span className="text-xs font-bold text-[#FF5722]">
+                    {(user.name || 'U').charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
               <span className="hidden lg:block text-xs font-semibold text-[#201611]">
                 {user.name?.split(' ')[0]}

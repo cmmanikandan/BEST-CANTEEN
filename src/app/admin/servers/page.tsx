@@ -49,6 +49,7 @@ export default function AdminServersPage() {
   const [staff, setStaff] = useState<ServerStaffAccount[]>(DEFAULT_STAFF);
   const [showModal, setShowModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState<ServerStaffAccount | null>(null);
+  const [deletingStaff, setDeletingStaff] = useState<ServerStaffAccount | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -256,7 +257,7 @@ export default function AdminServersPage() {
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={() => handleDelete(s.id, s.name)}
+                    onClick={() => setDeletingStaff(s)}
                     className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition"
                     title="Remove staff"
                   >
@@ -388,6 +389,46 @@ export default function AdminServersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── CONFIRM DELETE STAFF POPUP CARD ── */}
+      {deletingStaff && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-stone-200 text-center space-y-4 animate-scaleUp">
+            <div className="w-14 h-14 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto shadow-inner">
+              <Trash2 className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="font-black text-lg text-[#201611]">Confirm Remove Staff</h3>
+              <p className="text-xs text-stone-500 leading-relaxed">
+                Are you sure you want to remove <span className="font-extrabold text-[#201611]">&quot;{deletingStaff.name}&quot;</span>? This account will no longer be able to log in to the scanner.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingStaff(null)}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-stone-200 text-stone-700 font-bold text-xs hover:bg-stone-50 transition active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const updated = staff.filter((s) => s.id !== deletingStaff.id);
+                  saveStaffList(updated);
+                  setDeletingStaff(null);
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-xs shadow-md shadow-red-500/20 transition active:scale-95 flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Confirm Delete</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

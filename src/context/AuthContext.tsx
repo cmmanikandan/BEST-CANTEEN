@@ -92,11 +92,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (fbUser) {
         // Recognize configured Admin UID
         if (ADMIN_UIDS.includes(fbUser.uid)) {
+          const adminName = fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'Canteen Administrator');
           const adminUser: AdminUser = {
             id: fbUser.uid,
-            name: fbUser.displayName || 'Canteen Admin',
-            email: fbUser.email || 'canteen.admin@college.edu',
+            name: adminName,
+            email: fbUser.email || '',
             role: 'admin',
+            avatarUrl: fbUser.photoURL || undefined,
           };
           loginAs('admin', adminUser);
           return;
@@ -188,11 +190,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setFirebaseUser(fbUser);
 
       if (ADMIN_UIDS.includes(fbUser.uid)) {
+        const adminName = fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'Canteen Administrator');
         const adminUser: AdminUser = {
           id: fbUser.uid,
-          name: fbUser.displayName || 'Canteen Admin',
+          name: adminName,
           email: fbUser.email || email,
           role: 'admin',
+          avatarUrl: fbUser.photoURL || undefined,
         };
         loginAs('admin', adminUser);
         return { success: true };
@@ -270,10 +274,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .then((cred) => {
             const displayName =
               matched.role === 'customer'
-                ? 'Hariharan S.'
+                ? 'Customer User'
                 : matched.role === 'server'
-                ? 'Ramesh Counter 01'
-                : 'Priya Canteen Admin';
+                ? 'Counter Staff'
+                : 'Canteen Administrator';
             updateProfile(cred.user, { displayName }).catch(() => {});
           })
           .catch(() => {});
@@ -305,11 +309,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setFirebaseUser(fbUser);
 
       if (ADMIN_UIDS.includes(fbUser.uid)) {
+        const adminName = fbUser.displayName || (fbUser.email ? fbUser.email.split('@')[0] : 'Canteen Administrator');
         const adminUser: AdminUser = {
           id: fbUser.uid,
-          name: fbUser.displayName || 'Canteen Admin',
-          email: fbUser.email || 'canteen.admin@college.edu',
+          name: adminName,
+          email: fbUser.email || '',
           role: 'admin',
+          avatarUrl: fbUser.photoURL || undefined,
         };
         loginAs('admin', adminUser);
         return { success: true, user: adminUser as any };
@@ -352,6 +358,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithGoogleProfile = (googleEmail: string, googleName: string, avatarUrl?: string) => {
     const trimmedEmail = googleEmail.trim().toLowerCase();
     const trimmedName = googleName.trim() || trimmedEmail.split('@')[0];
+
+    if (trimmedEmail.includes('admin') || trimmedEmail === 'admin@bestcanteen.in') {
+      const adminUser: AdminUser = {
+        id: 'no2L4yONk3RjjFTnY9O5OkiDqbv1',
+        name: trimmedName || 'Canteen Administrator',
+        email: trimmedEmail,
+        role: 'admin',
+        avatarUrl: avatarUrl || undefined,
+      };
+      loginAs('admin', adminUser);
+      return;
+    }
+
     const customerUser: CustomerUser = {
       id: `google-${Date.now().toString().slice(-6)}`,
       name: trimmedName,

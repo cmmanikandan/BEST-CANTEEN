@@ -18,6 +18,12 @@ export default function CustomerHomePage() {
   const { user } = useAuth();
   const { foods, activeMealInfo, effectiveTime, orders } = useCanteen();
 
+  React.useEffect(() => {
+    if (!user) {
+      router.push('/');
+    }
+  }, [user, router]);
+
   const [selectedCategory, setSelectedCategory] = useState<MealCategory>('all');
   const [selectedOrderForQr, setSelectedOrderForQr] = useState<Order | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,7 +32,11 @@ export default function CustomerHomePage() {
     return getGreeting(effectiveTime.getHours());
   }, [effectiveTime]);
 
-  const firstName = user?.name ? user.name.split(' ')[0] : 'Hari';
+  const firstName = user?.name ? user.name.split(' ')[0] : 'Student';
+
+  if (!user) {
+    return null;
+  }
 
   // Visible foods only
   const visibleFoods = useMemo(() => {
