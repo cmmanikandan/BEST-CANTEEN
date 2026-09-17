@@ -15,7 +15,7 @@ import confetti from 'canvas-confetti';
 export default function CustomerCheckoutPage() {
   const router = useRouter();
   const { items, total, subtotal, parcelTotal, toOrderItems, clearCart } = useCart();
-  const { user } = useAuth();
+  const { user, isLoaded } = useAuth();
   const { createOrder, verifyPayment } = useCanteen();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -24,10 +24,18 @@ export default function CustomerCheckoutPage() {
 
   // Protect checkout page — user must be logged in
   React.useEffect(() => {
-    if (!user) {
+    if (isLoaded && !user) {
       router.push('/login?redirect=/customer/checkout');
     }
-  }, [user, router]);
+  }, [isLoaded, user, router]);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#FF5722] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   if (!user) return null;
 

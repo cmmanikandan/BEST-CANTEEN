@@ -9,10 +9,18 @@ import { ShoppingBag, QrCode, ArrowRight, CheckCircle2, Clock, Lock } from 'luci
 import { QrTokenModal } from '@/components/customer/QrTokenModal';
 
 export default function CustomerOrdersPage() {
-  const { user } = useAuth();
+  const { user, isLoaded } = useAuth();
   const { orders } = useCanteen();
   const [tab, setTab] = useState<'active' | 'history'>('active');
   const [selectedOrderForQr, setSelectedOrderForQr] = useState<Order | null>(null);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#FF5722] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   if (!user) {
     return (

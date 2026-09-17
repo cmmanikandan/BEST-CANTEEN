@@ -16,14 +16,22 @@ function CustomerPaymentContent() {
   const orderId = searchParams.get('orderId') || '';
   const amount = searchParams.get('amount') || '0';
 
-  const { user } = useAuth();
+  const { user, isLoaded } = useAuth();
   const { orders, verifyPayment } = useCanteen();
 
   React.useEffect(() => {
-    if (!user) {
+    if (isLoaded && !user) {
       router.push(`/login?redirect=/customer/payment?orderId=${orderId}&amount=${amount}`);
     }
-  }, [user, router, orderId, amount]);
+  }, [isLoaded, user, router, orderId, amount]);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#FF5722] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   if (!user) return null;
 

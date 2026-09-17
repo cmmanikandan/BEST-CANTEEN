@@ -11,14 +11,22 @@ import { Search, SlidersHorizontal, Check } from 'lucide-react';
 
 export default function CustomerMenuPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoaded } = useAuth();
   const { foods, activeMealInfo } = useCanteen();
 
   useEffect(() => {
-    if (!user) {
+    if (isLoaded && !user) {
       router.push('/login?redirect=/customer/menu');
     }
-  }, [user, router]);
+  }, [isLoaded, user, router]);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#FF5722] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   if (!user) return null;
 

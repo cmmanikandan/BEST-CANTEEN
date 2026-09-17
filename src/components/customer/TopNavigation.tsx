@@ -17,11 +17,16 @@ export function TopNavigation() {
   const { notifications, favorites } = useCanteen();
   const { totalItems } = useCart();
 
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const isAdmin =
-    role === 'admin' ||
-    user?.role === 'admin' ||
-    (user && 'id' in user && ADMIN_UIDS.includes(user.id)) ||
-    (typeof window !== 'undefined' && localStorage.getItem('bc_user_role') === 'admin');
+    mounted &&
+    (role === 'admin' ||
+      user?.role === 'admin' ||
+      (user && 'id' in user && ADMIN_UIDS.includes(user.id)));
 
 
   const unreadNotifs = notifications.filter((n) => !n.read).length;
@@ -122,7 +127,7 @@ export function TopNavigation() {
           </Link>
 
           {/* Profile Avatar or Login Button */}
-          {user ? (
+          {mounted && user ? (
             <Link
               href="/customer/profile"
               className="flex items-center gap-2 pl-1 group"
@@ -148,13 +153,15 @@ export function TopNavigation() {
                 {user.name?.split(' ')[0]}
               </span>
             </Link>
-          ) : (
+          ) : mounted ? (
             <Link
               href="/login"
               className="px-3.5 py-1.5 bg-[#FF5722] hover:bg-[#F4511E] text-white text-xs font-bold rounded-xl transition shadow-xs"
             >
               Login
             </Link>
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-stone-100" />
           )}
         </div>
       </div>

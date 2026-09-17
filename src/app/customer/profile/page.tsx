@@ -24,16 +24,24 @@ import {
 
 export default function CustomerProfilePage() {
   const router = useRouter();
-  const { user, role, loginAs, logout } = useAuth();
+  const { user, role, loginAs, logout, isLoaded } = useAuth();
   const { orders, favorites } = useCanteen();
 
   const [showLogoutModal, setShowLogoutModal] = React.useState(false);
 
   React.useEffect(() => {
-    if (!user) {
+    if (isLoaded && !user) {
       router.push('/login?redirect=/customer/profile');
     }
-  }, [user, router]);
+  }, [isLoaded, user, router]);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#FF5722] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   if (!user) return null;
 
@@ -41,8 +49,7 @@ export default function CustomerProfilePage() {
   const isAdmin =
     role === 'admin' ||
     user?.role === 'admin' ||
-    (user && 'id' in user && ADMIN_UIDS.includes(user.id)) ||
-    (typeof window !== 'undefined' && localStorage.getItem('bc_user_role') === 'admin');
+    (user && 'id' in user && ADMIN_UIDS.includes(user.id));
 
   const handleSwitchToAdmin = () => {
     loginAs('admin');

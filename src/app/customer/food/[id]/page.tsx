@@ -24,15 +24,23 @@ import { motion } from 'framer-motion';
 export default function FoodDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoaded } = useAuth();
   const { foods, favorites, toggleFavorite } = useCanteen();
   const { addToCart, getItemQuantity } = useCart();
 
   React.useEffect(() => {
-    if (!user) {
+    if (isLoaded && !user) {
       router.push(`/login?redirect=/customer/food/${id}`);
     }
-  }, [user, router, id]);
+  }, [isLoaded, user, router, id]);
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#FF5722] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   const food = foods.find((f) => f.id === id);
   const [quantity, setQuantity] = useState(1);

@@ -15,14 +15,14 @@ import { QrTokenModal } from '@/components/customer/QrTokenModal';
 
 export default function CustomerHomePage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoaded } = useAuth();
   const { foods, activeMealInfo, effectiveTime, orders } = useCanteen();
 
   React.useEffect(() => {
-    if (!user) {
+    if (isLoaded && !user) {
       router.push('/');
     }
-  }, [user, router]);
+  }, [isLoaded, user, router]);
 
   const [selectedCategory, setSelectedCategory] = useState<MealCategory>('all');
   const [selectedOrderForQr, setSelectedOrderForQr] = useState<Order | null>(null);
@@ -33,6 +33,14 @@ export default function CustomerHomePage() {
   }, [effectiveTime]);
 
   const firstName = user?.name ? user.name.split(' ')[0] : 'Student';
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#FF5722] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   if (!user) {
     return null;

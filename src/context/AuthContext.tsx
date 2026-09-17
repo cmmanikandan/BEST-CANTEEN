@@ -28,6 +28,7 @@ interface AuthContextType {
   firebaseUser: FirebaseUser | null;
   role: UserRole;
   isAuthenticated: boolean;
+  isLoaded: boolean;
   loginAs: (role: UserRole, customUser?: CustomerUser | ServerUser | AdminUser) => void;
   updateCustomerProfile: (profile: Partial<CustomerUser>) => void;
   login: (role: UserRole, identifier: string, pass: string) => Promise<{ success: boolean; user?: CustomerUser | ServerUser | AdminUser; error?: string }>;
@@ -64,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<UserRole>('customer');
   const [user, setUser] = useState<CustomerUser | ServerUser | AdminUser | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // 1. Initial State from localStorage (No automatic demo customer)
   useEffect(() => {
@@ -72,9 +74,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const savedCustomUser = localStorage.getItem('bc_custom_user');
       if (savedRole && savedCustomUser) {
         const parsed = JSON.parse(savedCustomUser);
-        const emailLower = (parsed.email || '').toLowerCase();
+        const emailLower = (parsed?.email || '').toLowerCase();
         if (
-          (parsed.id && ADMIN_UIDS.includes(parsed.id)) ||
+          (parsed?.id && ADMIN_UIDS.includes(parsed.id)) ||
           (emailLower && ADMIN_EMAILS.includes(emailLower))
         ) {
           setRole('admin');
@@ -95,6 +97,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {
       setUser(null);
+    } finally {
+      setIsLoaded(true);
     }
   }, []);
 
@@ -493,6 +497,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         firebaseUser,
         role,
         isAuthenticated: !!user,
+        isLoaded,
         loginAs,
         updateCustomerProfile,
         login,

@@ -8,8 +8,16 @@ import { FoodCard } from '@/components/customer/FoodCard';
 import { Heart, ArrowRight, Lock } from 'lucide-react';
 
 export default function CustomerFavoritesPage() {
-  const { user } = useAuth();
+  const { user, isLoaded } = useAuth();
   const { foods, favorites } = useCanteen();
+
+  if (!isLoaded) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#FF5722] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   if (!user) {
     return (
