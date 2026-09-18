@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useCanteen } from '@/context/CanteenContext';
+import { supabase } from '@/lib/supabase';
 import { Users, ShieldOff, ShieldCheck, Mail, ShoppingBag, DollarSign } from 'lucide-react';
 
 interface CustomerRecord {
@@ -20,14 +21,59 @@ export default function AdminCustomersPage() {
   const [blockedIds, setBlockedIds] = useState<string[]>([]);
   const [registeredCustomers, setRegisteredCustomers] = useState<any[]>([]);
 
-  // Load registered customers from persistent local registry
+  // Load registered customers from Supabase DB & persistent storage with Realtime sync
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('bc_registered_customers');
-      if (raw) {
-        setRegisteredCustomers(JSON.parse(raw));
+    let isMounted = true;
+    async function loadCustomers() {
+      try {
+        const { data, error } = await supabase.from('registered_customers').select('*');
+        if (!error && data && isMounted) {
+          const mapped = data.map((d) => ({
+            id: d.id,
+            name: d.name,
+            email: d.email,
+            avatarUrl: d.avatar_url,
+          }));
+          setRegisteredCustomers(mapped);
+          localStorage.setItem('bc_registered_customers', JSON.stringify(mapped));
+        } else {
+          const raw = localStorage.getItem('bc_registered_customers');
+          if (raw && isMounted) setRegisteredCustomers(JSON.parse(raw));
+        }
+      } catch {
+        const raw = localStorage.getItem('bc_registered_customers');
+        if (raw && isMounted) setRegisteredCustomers(JSON.parse(raw));
       }
-    } catch {}
+    }
+    loadCustomers();
+
+    const channel = supabase
+      .channel('registered_customers_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'registered_customers' },
+        (payload) => {
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const row: any = payload.new;
+            setRegisteredCustomers((prev) => {
+              const existing = prev.findIndex((c) => c.email?.toLowerCase() === row.email?.toLowerCase());
+              const record = { id: row.id, name: row.name, email: row.email, avatarUrl: row.avatar_url };
+              if (existing >= 0) {
+                const next = [...prev];
+                next[existing] = record;
+                return next;
+              }
+              return [...prev, record];
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Dynamically compile real customers with DP, name, email & ordering stats

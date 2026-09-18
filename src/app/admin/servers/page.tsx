@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useCanteen } from '@/context/CanteenContext';
+import { supabase } from '@/lib/supabase';
 import { Store, UserCheck, Plus, Edit2, Trash2, X, Eye, EyeOff, Mail, Lock, Shield, CheckCircle2 } from 'lucide-react';
 
 export interface ServerStaffAccount {
@@ -15,28 +16,27 @@ export interface ServerStaffAccount {
   createdAt: string;
 }
 
-const DEFAULT_STAFF: ServerStaffAccount[] = [
-  {
-    id: 'staff-1',
-    name: 'Ramesh Kumar',
-    email: 'ramesh@bestcanteen.in',
-    password: 'server123',
-    counterNumber: 'Counter 01',
-    role: 'Chief Dispenser',
-    status: 'Online',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'staff-2',
-    name: 'Mani Selvam',
-    email: 'mani@bestcanteen.in',
-    password: 'server456',
-    counterNumber: 'Counter 02',
-    role: 'Counter Assistant',
-    status: 'Online',
-    createdAt: new Date().toISOString(),
-  },
-];
+const mapStaffFromDb = (r: any): ServerStaffAccount => ({
+  id: r.id,
+  name: r.name,
+  email: r.email,
+  password: r.password,
+  counterNumber: r.counter_number || 'Main Food Counter',
+  role: r.role || 'Food Server',
+  status: (r.status as any) || 'Online',
+  createdAt: r.created_at || new Date().toISOString(),
+});
+
+const mapStaffToDb = (s: ServerStaffAccount) => ({
+  id: s.id,
+  name: s.name,
+  email: s.email,
+  password: s.password || 'server123',
+  counter_number: s.counterNumber,
+  role: s.role,
+  status: s.status,
+  created_at: s.createdAt,
+});
 
 const STATUS_COLORS: Record<string, string> = {
   Online: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -46,7 +46,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function AdminServersPage() {
   const { orders } = useCanteen();
-  const [staff, setStaff] = useState<ServerStaffAccount[]>(DEFAULT_STAFF);
+  const [staff, setStaff] = useState<ServerStaffAccount[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState<ServerStaffAccount | null>(null);
   const [deletingStaff, setDeletingStaff] = useState<ServerStaffAccount | null>(null);
@@ -57,28 +58,83 @@ export default function AdminServersPage() {
   const [fName, setFName] = useState('');
   const [fEmail, setFEmail] = useState('');
   const [fPassword, setFPassword] = useState('');
-  const [fCounter, setFCounter] = useState('Counter 01');
-  const [fRole, setFRole] = useState('Chief Dispenser');
+  const [fCounter, setFCounter] = useState('Main Food Counter');
+  const [fRole, setFRole] = useState('Food Server');
 
-  // Hydrate from localStorage
+  // Load from Supabase DB on mount & subscribe to realtime updates
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('bc_servers');
-      if (saved) {
-        setStaff(JSON.parse(saved));
-      } else {
-        localStorage.setItem('bc_servers', JSON.stringify(DEFAULT_STAFF));
-      }
-    } catch {}
-  }, []);
+    let isMounted = true;
 
-  // Persist staff changes to localStorage
-  const saveStaffList = (updated: ServerStaffAccount[]) => {
-    setStaff(updated);
-    try {
-      localStorage.setItem('bc_servers', JSON.stringify(updated));
-    } catch {}
-  };
+    async function loadStaff() {
+      try {
+        const { data, error } = await supabase
+          .from('server_staff')
+          .select('*')
+          .order('created_at', { ascending: true });
+
+        if (!error && data) {
+          if (isMounted) {
+            const mapped = data.map(mapStaffFromDb);
+            setStaff(mapped);
+            localStorage.setItem('bc_servers', JSON.stringify(mapped));
+          }
+        } else {
+          // Fallback to local cache if offline
+          const saved = localStorage.getItem('bc_servers');
+          if (saved && isMounted) {
+            setStaff(JSON.parse(saved));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load server staff from Supabase:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    }
+
+    loadStaff();
+
+    // Supabase Realtime Subscription
+    const channel = supabase
+      .channel('server_staff_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'server_staff' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newItem = mapStaffFromDb(payload.new);
+            setStaff((prev) => {
+              if (prev.some((s) => s.id === newItem.id)) return prev;
+              const next = [...prev, newItem];
+              localStorage.setItem('bc_servers', JSON.stringify(next));
+              return next;
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedItem = mapStaffFromDb(payload.new);
+            setStaff((prev) => {
+              const next = prev.map((s) => (s.id === updatedItem.id ? updatedItem : s));
+              localStorage.setItem('bc_servers', JSON.stringify(next));
+              return next;
+            });
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = (payload.old as any)?.id;
+            if (deletedId) {
+              setStaff((prev) => {
+                const next = prev.filter((s) => s.id !== deletedId);
+                localStorage.setItem('bc_servers', JSON.stringify(next));
+                return next;
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   // Calculate real served count dynamically from verified canteen orders
   const getServedCount = (staffName: string) => {
@@ -92,8 +148,8 @@ export default function AdminServersPage() {
     setFName('');
     setFEmail('');
     setFPassword('');
-    setFCounter('Counter 01');
-    setFRole('Chief Dispenser');
+    setFCounter('Main Food Counter');
+    setFRole('Food Server');
     setShowModal(true);
   };
 
@@ -107,23 +163,33 @@ export default function AdminServersPage() {
     setShowModal(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (editingStaff) {
-      const updated = staff.map((s) =>
-        s.id === editingStaff.id
-          ? {
-              ...s,
-              name: fName.trim(),
-              email: fEmail.trim().toLowerCase(),
-              password: fPassword.trim() || s.password,
-              counterNumber: fCounter.trim(),
-              role: fRole.trim(),
-            }
-          : s
-      );
-      saveStaffList(updated);
+      const updatedAccount: ServerStaffAccount = {
+        ...editingStaff,
+        name: fName.trim(),
+        email: fEmail.trim().toLowerCase(),
+        password: fPassword.trim() || editingStaff.password,
+        counterNumber: fCounter.trim(),
+        role: fRole.trim(),
+      };
+
+      setStaff((prev) => {
+        const next = prev.map((s) => (s.id === editingStaff.id ? updatedAccount : s));
+        localStorage.setItem('bc_servers', JSON.stringify(next));
+        return next;
+      });
+
+      try {
+        await supabase
+          .from('server_staff')
+          .upsert(mapStaffToDb(updatedAccount));
+      } catch (err) {
+        console.error('Failed to update staff in Supabase:', err);
+      }
+
       setSuccessMessage(`Updated server account for ${fName.trim()}`);
     } else {
       const newStaff: ServerStaffAccount = {
@@ -136,8 +202,21 @@ export default function AdminServersPage() {
         status: 'Online',
         createdAt: new Date().toISOString(),
       };
-      const updated = [...staff, newStaff];
-      saveStaffList(updated);
+
+      setStaff((prev) => {
+        const next = [...prev, newStaff];
+        localStorage.setItem('bc_servers', JSON.stringify(next));
+        return next;
+      });
+
+      try {
+        await supabase
+          .from('server_staff')
+          .insert(mapStaffToDb(newStaff));
+      } catch (err) {
+        console.error('Failed to insert staff into Supabase:', err);
+      }
+
       setSuccessMessage(`Created server account for ${newStaff.name}! They can now log in at /server/login`);
     }
 
@@ -145,23 +224,48 @@ export default function AdminServersPage() {
     setTimeout(() => setSuccessMessage(null), 4000);
   };
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (confirm(`Remove counter staff account for ${name}?`)) {
-      const updated = staff.filter((s) => s.id !== id);
-      saveStaffList(updated);
+      setStaff((prev) => {
+        const next = prev.filter((s) => s.id !== id);
+        localStorage.setItem('bc_servers', JSON.stringify(next));
+        return next;
+      });
+
+      try {
+        await supabase
+          .from('server_staff')
+          .delete()
+          .eq('id', id);
+      } catch (err) {
+        console.error('Failed to delete staff from Supabase:', err);
+      }
     }
   };
 
-  const toggleStatus = (id: string) => {
-    const updated = staff.map((s) => {
-      if (s.id === id) {
-        const nextStatus: 'Online' | 'Offline' | 'Standby' =
-          s.status === 'Online' ? 'Offline' : s.status === 'Offline' ? 'Standby' : 'Online';
-        return { ...s, status: nextStatus };
-      }
-      return s;
+  const toggleStatus = async (id: string) => {
+    const target = staff.find((s) => s.id === id);
+    if (!target) return;
+
+    const nextStatus: 'Online' | 'Offline' | 'Standby' =
+      target.status === 'Online' ? 'Offline' : target.status === 'Offline' ? 'Standby' : 'Online';
+
+    const updatedAccount = { ...target, status: nextStatus };
+
+    setStaff((prev) => {
+      const next = prev.map((s) => (s.id === id ? updatedAccount : s));
+      localStorage.setItem('bc_servers', JSON.stringify(next));
+      return next;
     });
-    saveStaffList(updated);
+
+    try {
+      await supabase
+        .from('server_staff')
+        .update({ status: nextStatus })
+        .eq('id', id);
+    } catch (err) {
+      console.error('Failed to update staff status in Supabase:', err);
+    }
   };
 
   return (
@@ -419,9 +523,10 @@ export default function AdminServersPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const updated = staff.filter((s) => s.id !== deletingStaff.id);
-                  saveStaffList(updated);
-                  setDeletingStaff(null);
+                  if (deletingStaff) {
+                    handleDelete(deletingStaff.id, deletingStaff.name);
+                    setDeletingStaff(null);
+                  }
                 }}
                 className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-black text-xs shadow-md shadow-red-500/20 transition active:scale-95 flex items-center justify-center gap-1.5"
               >

@@ -60,7 +60,7 @@ export default function CustomerProfilePage() {
   const confirmLogout = () => {
     setShowLogoutModal(false);
     logout();
-    router.push('/login');
+    router.push('/');
   };
 
   const menuItems = [

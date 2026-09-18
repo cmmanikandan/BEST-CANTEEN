@@ -14,6 +14,7 @@ import {
   updateProfile,
   FirebaseUser,
 } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
 
 // Credential registry per role for demo & fallback
 const CREDENTIALS: Record<string, { email: string; password: string; role: UserRole }> = {
@@ -67,6 +68,22 @@ export function recordRegisteredCustomer(cust: { id: string; name: string; email
       list.push(updatedRecord);
     }
     localStorage.setItem('bc_registered_customers', JSON.stringify(list));
+
+    // Also sync to Supabase registered_customers table
+    supabase
+      .from('registered_customers')
+      .upsert({
+        id: cust.id,
+        name: updatedRecord.name,
+        email: cust.email.toLowerCase(),
+        avatar_url: cust.avatarUrl || null,
+        role: 'customer',
+        status: 'Active',
+      })
+      .then(
+        () => {},
+        () => {}
+      );
   } catch {}
 }
 
@@ -318,8 +335,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return { success: true };
     } catch (fbError: any) {
-      // 1. Check admin-created server staff registry
+      // 1. Check admin-created server staff in Supabase DB (and fallback to localStorage)
       if (requestedRole === 'server') {
+        try {
+          const { data: dbStaff } = await supabase
+            .from('server_staff')
+            .select('*')
+            .eq('email', email.trim().toLowerCase())
+            .single();
+
+          if (dbStaff && (!dbStaff.password || dbStaff.password === password)) {
+            const serverUser: ServerUser = {
+              id: dbStaff.id,
+              name: dbStaff.name,
+              counterNumber: dbStaff.counter_number || 'Main Food Counter',
+              role: 'server',
+            };
+            loginAs('server', serverUser);
+            return { success: true, user: serverUser };
+          }
+        } catch {}
+
         try {
           const savedServers = localStorage.getItem('bc_servers');
           if (savedServers) {
@@ -335,7 +371,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 role: 'server',
               };
               loginAs('server', serverUser);
-              return { success: true };
+              return { success: true, user: serverUser };
             }
           }
         } catch {}

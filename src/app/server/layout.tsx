@@ -27,7 +27,7 @@ export default function ServerLayout({ children }: { children: React.ReactNode }
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push('/');
   };
 
   return (

@@ -30,18 +30,6 @@ export default function LandingPage() {
   const [checkingAuth, setCheckingAuth] = React.useState(true);
   const redirectTriggeredRef = React.useRef(false);
 
-  // Synchronously check if credentials exist in localStorage with 0ms delay
-  const hasLocalSession = React.useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      return !!(localStorage.getItem('bc_user_role') && localStorage.getItem('bc_custom_user'));
-    } catch {
-      return false;
-    }
-  }, []);
-
-  const isUserLoggedIn = hasLocalSession || !!user;
-
   React.useEffect(() => {
     if (redirectTriggeredRef.current) return;
 
@@ -66,15 +54,15 @@ export default function LandingPage() {
 
       // Logged in: Route directly to Dashboard
       router.replace(destination);
-    } else if (isLoaded && !user && !savedUser) {
-      // Guest: not logged in -> reveal landing page immediately
+    } else if (isLoaded || (!savedRole && !savedUser)) {
+      // Guest / Not logged in: reveal landing page immediately
       setCheckingAuth(false);
     }
   }, [isLoaded, user, role, router]);
 
-  // WHILE CHECKING AUTH OR LOGGED IN (redirecting to dashboard):
-  // Render ONLY the clean "... loading" indicator. The landing page HTML is never rendered.
-  if (checkingAuth || isUserLoggedIn) {
+  // WHILE CHECKING AUTH (or redirecting to dashboard if logged in):
+  // Render clean "... loading" indicator. The landing page HTML is never rendered when logged in.
+  if (checkingAuth) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#FDFBF7]">
         <div className="flex flex-col items-center gap-3">

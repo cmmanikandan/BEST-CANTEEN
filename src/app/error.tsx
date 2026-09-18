@@ -10,6 +10,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
+    console.error('CRITICAL CLIENT ERROR:', error);
     // Automatically recover transparently on client render errors without showing error modal
     const timer = setTimeout(() => {
       try {

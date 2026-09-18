@@ -98,29 +98,7 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
       const savedFoods = localStorage.getItem('bc_foods');
       if (savedFoods) {
         const parsedFoods: FoodItem[] = JSON.parse(savedFoods);
-        // Purge any old demo food items completely
-        const cleanFoods = parsedFoods.filter(
-          (f) =>
-            !f.id.startsWith('food-') &&
-            ![
-              'food-curd-rice',
-              'food-medu-vada',
-              'food-ghee-roast-dosa',
-              'food-south-indian-meals',
-              'food-samosa-plate',
-              'food-lemon-rice',
-              'food-filter-coffee',
-              'food-chapati-kurma',
-              'food-paneer-butter-masala',
-              'food-chicken-biryani',
-              'food-egg-puff',
-              'food-idli-sambar',
-            ].includes(f.id)
-        );
-        setFoods(cleanFoods);
-        localStorage.setItem('bc_foods', JSON.stringify(cleanFoods));
-      } else {
-        setFoods([]);
+        setFoods(parsedFoods);
       }
 
       const savedSchedules = localStorage.getItem('bc_meal_schedules');
@@ -192,32 +170,12 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
 
         if (!foodsError && foodsData && foodsData.length > 0) {
           if (isMounted) {
-            // Also filter out any demo items from remote DB if any remained
-            const cleanRemote = foodsData
-              .map(mapFoodFromDb)
-              .filter(
-                (f) =>
-                  !f.id.startsWith('food-') &&
-                  ![
-                    'food-curd-rice',
-                    'food-medu-vada',
-                    'food-ghee-roast-dosa',
-                    'food-south-indian-meals',
-                    'food-samosa-plate',
-                    'food-lemon-rice',
-                    'food-filter-coffee',
-                    'food-chapati-kurma',
-                    'food-paneer-butter-masala',
-                    'food-chicken-biryani',
-                    'food-egg-puff',
-                    'food-idli-sambar',
-                  ].includes(f.id)
-              );
+            const cleanRemote = foodsData.map(mapFoodFromDb);
             setFoods(cleanRemote);
+            localStorage.setItem('bc_foods', JSON.stringify(cleanRemote));
             setIsSupabaseConnected(true);
           }
         } else if (!foodsError && foodsData && foodsData.length === 0) {
-          // Empty table -> keep empty, do NOT seed demo items
           if (isMounted) setIsSupabaseConnected(true);
         }
 
