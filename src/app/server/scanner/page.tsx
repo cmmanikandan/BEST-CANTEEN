@@ -32,8 +32,6 @@ export default function ServerScannerPage() {
     servedAt?: string;
   } | null>(null);
 
-  // Manual search/token input
-  const [manualToken, setManualToken] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -221,20 +219,12 @@ export default function ServerScannerPage() {
   // Resume scanning for next customer
   const handleScanNext = () => {
     setScanResult(null);
-    setManualToken('');
     isScanningRef.current = true;
     if (cameraActive) {
       animationFrameRef.current = requestAnimationFrame(scanLoop);
     } else {
       startCamera();
     }
-  };
-
-  // Manual token verify submission
-  const handleManualSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!manualToken.trim()) return;
-    handleDecodedString(manualToken.trim());
   };
 
   return (
@@ -269,9 +259,6 @@ export default function ServerScannerPage() {
                 <span className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-[#FF5722] rounded-tr-xl" />
                 <span className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-[#FF5722] rounded-bl-xl" />
                 <span className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-[#FF5722] rounded-br-xl" />
-
-                {/* Animated Laser Scan line */}
-                <div className="absolute left-1 right-1 h-0.5 bg-gradient-to-r from-transparent via-[#FF5722] to-transparent shadow-[0_0_8px_#FF5722] animate-bounce top-1/2" />
               </div>
             </div>
           )}
@@ -426,28 +413,6 @@ export default function ServerScannerPage() {
         </div>
       )}
 
-      {/* Manual Token Number Input */}
-      <div className="bg-white rounded-3xl p-4 border border-stone-200 shadow-xs space-y-2">
-        <p className="text-[11px] font-extrabold text-[#8C7E76] uppercase tracking-wider">
-          Or Enter Token ID Manually
-        </p>
-        <form onSubmit={handleManualSubmit} className="flex gap-2">
-          <input
-            type="text"
-            value={manualToken}
-            onChange={(e) => setManualToken(e.target.value)}
-            placeholder="e.g. BC21522 or #BC21522"
-            className="flex-1 px-3.5 py-2.5 rounded-xl border border-stone-200 text-xs font-semibold focus:outline-none focus:border-[#FF5722] uppercase tracking-wider"
-          />
-          <button
-            type="submit"
-            disabled={!manualToken.trim() || isProcessing}
-            className="px-4 py-2.5 bg-[#FF5722] hover:bg-[#F4511E] text-white text-xs font-bold rounded-xl transition disabled:opacity-50 shrink-0"
-          >
-            {isProcessing ? 'Verifying...' : 'Verify'}
-          </button>
-        </form>
-      </div>
 
       {/* Guidelines */}
       <div className="bg-[#FAF8F5] p-3.5 rounded-2xl border border-stone-200/80 text-center space-y-0.5 text-[11px] text-[#8C7E76]">
