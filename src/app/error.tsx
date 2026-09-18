@@ -13,7 +13,25 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error('Best Canteen Client Application Error:', error);
-  }, [error]);
+    // Attempt graceful auto-recovery once on transient hydration/render errors
+    try {
+      const lastReset = sessionStorage.getItem('bc_err_last_reset');
+      const now = Date.now();
+      if (!lastReset || now - Number(lastReset) > 8000) {
+        sessionStorage.setItem('bc_err_last_reset', String(now));
+        setTimeout(() => {
+          reset();
+        }, 120);
+      }
+    } catch {}
+  }, [error, reset]);
+
+  const handleFullReload = () => {
+    try {
+      sessionStorage.removeItem('bc_err_last_reset');
+    } catch {}
+    window.location.reload();
+  };
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center p-4 sm:p-6 text-center">
@@ -24,20 +42,20 @@ export default function GlobalError({
 
         <div className="space-y-1.5">
           <h2 className="text-2xl font-black text-[#201611] tracking-tight">
-            Something went wrong
+            Reloading Canteen...
           </h2>
           <p className="text-xs text-[#5C4E46] leading-relaxed">
-            We encountered a temporary hiccup. Please try refreshing or return to the main canteen home.
+            Restoring your canteen view and latest live menu items.
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
           <button
-            onClick={() => reset()}
+            onClick={handleFullReload}
             className="w-full sm:flex-1 py-3 px-4 bg-[#FF5722] hover:bg-[#F4511E] text-white font-bold text-xs rounded-2xl shadow-md transition flex items-center justify-center gap-2 active:scale-95"
           >
             <RefreshCw className="w-4 h-4" />
-            <span>Try Again</span>
+            <span>Reload Page</span>
           </button>
           <button
             onClick={() => {

@@ -39,8 +39,8 @@ export function MealCategoryPills({
       );
     }
 
-    const start = parseMinutes(schedule.startTime);
-    const end = parseMinutes(schedule.endTime);
+    const start = parseMinutes(schedule.startTime || '00:00');
+    const end = parseMinutes(schedule.endTime || '23:59');
 
     if (currentMins >= start && currentMins < end) {
       return (
@@ -54,7 +54,7 @@ export function MealCategoryPills({
     if (currentMins < start) {
       return (
         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500 font-medium">
-          Starts {formatTime12h(schedule.startTime)}
+          Starts {formatTime12h(schedule.startTime || '00:00')}
         </span>
       );
     }

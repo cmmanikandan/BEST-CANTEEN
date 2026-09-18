@@ -46,9 +46,33 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+export function recordRegisteredCustomer(cust: { id: string; name: string; email: string; avatarUrl?: string }) {
+  if (typeof window === 'undefined' || !cust?.email) return;
+  try {
+    const raw = localStorage.getItem('bc_registered_customers');
+    const list: any[] = raw ? JSON.parse(raw) : [];
+    const index = list.findIndex(
+      (c) => (c.email && cust.email && c.email.toLowerCase() === cust.email.toLowerCase()) || (c.id && cust.id && c.id === cust.id)
+    );
+    const updatedRecord = {
+      id: cust.id,
+      name: cust.name || cust.email.split('@')[0],
+      email: cust.email,
+      avatarUrl: cust.avatarUrl,
+      lastActive: new Date().toISOString(),
+    };
+    if (index >= 0) {
+      list[index] = { ...list[index], ...updatedRecord };
+    } else {
+      list.push(updatedRecord);
+    }
+    localStorage.setItem('bc_registered_customers', JSON.stringify(list));
+  } catch {}
+}
+
 function setCookie(name: string, value: string) {
   try {
-    document.cookie = `${name}=${value}; path=/; max-age=86400; SameSite=Lax`;
+    document.cookie = `${name}=${value}; path=/; max-age=31536000; SameSite=Lax`;
   } catch {}
 }
 
@@ -134,11 +158,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             id: fbUser.uid,
             name: fbUser.displayName || 'Customer User',
             email: fbUser.email || '',
-            phone: fbUser.phoneNumber || '+91 98765 43210',
             role: 'customer',
             avatarUrl: fbUser.photoURL || undefined,
           };
           setUser(customerUser);
+          recordRegisteredCustomer(customerUser);
           try {
             localStorage.setItem('bc_custom_user', JSON.stringify(customerUser));
           } catch {}
@@ -167,10 +191,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(finalUser);
       try {
         localStorage.setItem('bc_custom_user', JSON.stringify(finalUser));
+        if (finalUser.role === 'customer' && 'email' in finalUser && finalUser.email) {
+          recordRegisteredCustomer(finalUser as CustomerUser);
+        }
       } catch {}
     } else {
       if (newRole === 'customer') {
-        setUser(null);
+        let existingUser: any = null;
+        try {
+          const saved = localStorage.getItem('bc_custom_user');
+          if (saved) existingUser = JSON.parse(saved);
+        } catch {}
+        if (!existingUser) {
+          existingUser = {
+            id: `cust-${Date.now().toString().slice(-6)}`,
+            name: 'Canteen Customer',
+            email: 'customer@college.edu',
+            role: 'customer',
+          };
+        }
+        setUser(existingUser);
+        try {
+          localStorage.setItem('bc_custom_user', JSON.stringify(existingUser));
+          recordRegisteredCustomer(existingUser);
+        } catch {}
       } else if (newRole === 'server') {
         setUser(DEMO_SERVER);
       } else if (newRole === 'admin') {
@@ -246,10 +290,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: fbUser.uid,
           name: fbUser.displayName || 'Customer User',
           email: fbUser.email || email,
-          phone: fbUser.phoneNumber || '+91 98765 43210',
           role: 'customer',
           avatarUrl: fbUser.photoURL || undefined,
         };
+        recordRegisteredCustomer(customerUser);
         loginAs('customer', customerUser);
         return { success: true, user: customerUser };
       } else if (requestedRole === 'server') {
@@ -382,11 +426,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: fbUser.uid,
         name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Google Student',
         email: fbUser.email || '',
-        phone: fbUser.phoneNumber || '+91 98765 43210',
         role: 'customer',
         avatarUrl: fbUser.photoURL || undefined,
       };
 
+      recordRegisteredCustomer(customerUser);
       loginAs(requestedRole, customerUser);
       return { success: true, user: customerUser };
     } catch (err: any) {
@@ -432,10 +476,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: `google-${Date.now().toString().slice(-6)}`,
       name: trimmedName,
       email: trimmedEmail,
-      phone: '+91 98765 43210',
       role: 'customer',
       avatarUrl: avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
     };
+    recordRegisteredCustomer(customerUser);
     loginAs('customer', customerUser);
   };
 
@@ -448,7 +492,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     pass: string,
     name: string,
-    phone = '+91 98765 43210'
+    phone?: string
   ): Promise<{ success: boolean; error?: string }> => {
     try {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), pass.trim());
@@ -463,6 +507,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           phone,
           role: 'customer',
         };
+        recordRegisteredCustomer(customerUser);
         loginAs('customer', customerUser);
       } else {
         loginAs(requestedRole);

@@ -22,7 +22,14 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams?.get('redirect') || null;
 
-  const { login, loginWithGoogle, loginWithGoogleProfile, signup, role: currentRole } = useAuth();
+  const { user, isLoaded, login, loginWithGoogle, loginWithGoogleProfile, signup, role: currentRole } = useAuth();
+
+  React.useEffect(() => {
+    if (isLoaded && user) {
+      const dest = redirectUrl || (user.role === 'admin' ? '/admin/dashboard' : user.role === 'server' ? '/server/dashboard' : '/customer/home');
+      router.replace(dest);
+    }
+  }, [isLoaded, user, redirectUrl, router]);
 
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [loginError, setLoginError] = useState<string | null>(null);

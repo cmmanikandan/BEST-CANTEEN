@@ -42,11 +42,12 @@ export default function CustomerOrdersPage() {
 
   const myOrders = orders.filter((o) => {
     if (!user) return false;
+    const userEmail = 'email' in user ? user.email : '';
     return (
       o.userId === user.id ||
-      ('email' in user && o.userName === user.name) ||
-      o.userId === 'customer-online' ||
-      o.userId === 'user-hari'
+      (userEmail && o.userEmail === userEmail) ||
+      ('name' in user && o.userName === user.name) ||
+      o.userId === 'customer-online'
     );
   });
 

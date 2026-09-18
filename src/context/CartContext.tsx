@@ -30,12 +30,15 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  // Load from localStorage
+  // Load from localStorage safely
   useEffect(() => {
     try {
       const saved = localStorage.getItem('bc_cart');
       if (saved) {
-        setItems(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setItems(parsed.filter((item) => item && item.food && typeof item.food.price === 'number'));
+        }
       }
     } catch {
       // ignore
@@ -52,11 +55,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items]);
 
   const addToCart = (food: FoodItem, quantity = 1) => {
+    if (!food || !food.id) return;
     setItems((prev) => {
-      const existing = prev.find((i) => i.food.id === food.id);
+      const existing = prev.find((i) => i.food && i.food.id === food.id);
       if (existing) {
         return prev.map((i) =>
-          i.food.id === food.id ? { ...i, quantity: i.quantity + quantity } : i
+          i.food.id === food.id ? { ...i, quantity: (i.quantity || 0) + quantity } : i
         );
       }
       return [...prev, { food, quantity, isParcel: false }];
@@ -64,7 +68,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeFromCart = (foodId: string) => {
-    setItems((prev) => prev.filter((i) => i.food.id !== foodId));
+    setItems((prev) => prev.filter((i) => i.food && i.food.id !== foodId));
   };
 
   const updateQuantity = (foodId: string, quantity: number) => {
@@ -73,19 +77,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     setItems((prev) =>
-      prev.map((i) => (i.food.id === foodId ? { ...i, quantity } : i))
+      prev.map((i) => (i.food && i.food.id === foodId ? { ...i, quantity } : i))
     );
   };
 
   const toggleParcel = (foodId: string) => {
     setItems((prev) =>
-      prev.map((i) => (i.food.id === foodId ? { ...i, isParcel: !i.isParcel } : i))
+      prev.map((i) => (i.food && i.food.id === foodId ? { ...i, isParcel: !i.isParcel } : i))
     );
   };
 
   const getItemQuantity = (foodId: string): number => {
-    const item = items.find((i) => i.food.id === foodId);
-    return item ? item.quantity : 0;
+    const item = items.find((i) => i.food && i.food.id === foodId);
+    return item ? item.quantity || 0 : 0;
   };
 
   const clearCart = () => {
@@ -93,32 +97,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const totalItems = useMemo(() => {
-    return items.reduce((acc, curr) => acc + curr.quantity, 0);
+    return (items || []).reduce((acc, curr) => acc + (curr?.quantity || 0), 0);
   }, [items]);
 
   const subtotal = useMemo(() => {
-    return items.reduce((acc, curr) => acc + curr.food.price * curr.quantity, 0);
+    return (items || []).reduce((acc, curr) => acc + (curr?.food?.price || 0) * (curr?.quantity || 0), 0);
   }, [items]);
 
   // Parcel charges: ₹5 for every single dish packed as parcel
   const parcelTotal = useMemo(() => {
-    return items.reduce(
-      (acc, curr) => acc + (curr.isParcel ? 5 * curr.quantity : 0),
+    return (items || []).reduce(
+      (acc, curr) => acc + (curr?.isParcel ? 5 * (curr?.quantity || 0) : 0),
       0
     );
   }, [items]);
 
   const tax = 0; // Canteen prices are all-inclusive net prices
-  const total = subtotal + parcelTotal + tax;
+  const total = (subtotal || 0) + (parcelTotal || 0) + tax;
 
   const toOrderItems = (): OrderItem[] => {
-    return items.map((i) => ({
-      foodId: i.food.id,
-      name: i.isParcel ? `${i.food.name} (Parcel 📦)` : i.food.name,
-      price: i.food.price + (i.isParcel ? 5 : 0),
-      quantity: i.quantity,
-      imageUrl: i.food.imageUrl,
-    }));
+    return (items || [])
+      .filter((i) => i && i.food && i.food.id)
+      .map((i) => ({
+        foodId: i.food.id,
+        name: i.isParcel ? `${i.food.name} (Parcel 📦)` : i.food.name,
+        price: (i.food.price || 0) + (i.isParcel ? 5 : 0),
+        quantity: i.quantity || 1,
+        imageUrl: i.food.imageUrl || '',
+      }));
   };
 
   return (

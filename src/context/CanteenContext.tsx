@@ -52,7 +52,7 @@ interface CanteenContextType {
   createOrder: (
     items: OrderItem[],
     notes?: string,
-    customerDetails?: { id?: string; name?: string; phone?: string }
+    customerDetails?: { id?: string; name?: string; phone?: string; email?: string; avatarUrl?: string }
   ) => Order;
   createCashPosOrder: (
     items: OrderItem[],
@@ -95,7 +95,32 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const savedFoods = localStorage.getItem('bc_foods');
-      if (savedFoods) setFoods(JSON.parse(savedFoods));
+      if (savedFoods) {
+        const parsedFoods: FoodItem[] = JSON.parse(savedFoods);
+        // Purge any old demo food items completely
+        const cleanFoods = parsedFoods.filter(
+          (f) =>
+            !f.id.startsWith('food-') &&
+            ![
+              'food-curd-rice',
+              'food-medu-vada',
+              'food-ghee-roast-dosa',
+              'food-south-indian-meals',
+              'food-samosa-plate',
+              'food-lemon-rice',
+              'food-filter-coffee',
+              'food-chapati-kurma',
+              'food-paneer-butter-masala',
+              'food-chicken-biryani',
+              'food-egg-puff',
+              'food-idli-sambar',
+            ].includes(f.id)
+        );
+        setFoods(cleanFoods);
+        localStorage.setItem('bc_foods', JSON.stringify(cleanFoods));
+      } else {
+        setFoods([]);
+      }
 
       const savedSchedules = localStorage.getItem('bc_meal_schedules');
       if (savedSchedules) {
@@ -166,13 +191,32 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
 
         if (!foodsError && foodsData && foodsData.length > 0) {
           if (isMounted) {
-            setFoods(foodsData.map(mapFoodFromDb));
+            // Also filter out any demo items from remote DB if any remained
+            const cleanRemote = foodsData
+              .map(mapFoodFromDb)
+              .filter(
+                (f) =>
+                  !f.id.startsWith('food-') &&
+                  ![
+                    'food-curd-rice',
+                    'food-medu-vada',
+                    'food-ghee-roast-dosa',
+                    'food-south-indian-meals',
+                    'food-samosa-plate',
+                    'food-lemon-rice',
+                    'food-filter-coffee',
+                    'food-chapati-kurma',
+                    'food-paneer-butter-masala',
+                    'food-chicken-biryani',
+                    'food-egg-puff',
+                    'food-idli-sambar',
+                  ].includes(f.id)
+              );
+            setFoods(cleanRemote);
             setIsSupabaseConnected(true);
           }
         } else if (!foodsError && foodsData && foodsData.length === 0) {
-          // Empty table -> seed initial foods
-          const seedData = INITIAL_FOOD_ITEMS.map(mapFoodToDb);
-          safeDbSync(() => supabase.from('foods').insert(seedData));
+          // Empty table -> keep empty, do NOT seed demo items
           if (isMounted) setIsSupabaseConnected(true);
         }
 
@@ -333,10 +377,10 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
   const activeMealInfo = useMemo<ActiveMealInfo>(() => {
     const currentMins = effectiveTime.getHours() * 60 + effectiveTime.getMinutes();
 
-    for (const schedule of mealSchedules) {
-      if (!schedule.isActive || schedule.isAllDay) continue;
-      const start = parseMinutes(schedule.startTime);
-      const end = parseMinutes(schedule.endTime);
+    for (const schedule of mealSchedules || []) {
+      if (!schedule || !schedule.isActive || schedule.isAllDay) continue;
+      const start = parseMinutes(schedule.startTime || '00:00');
+      const end = parseMinutes(schedule.endTime || '23:59');
 
       if (currentMins >= start && currentMins < end) {
         return {
@@ -450,10 +494,10 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
   const createOrder = (
     items: OrderItem[],
     notes?: string,
-    customerDetails?: { id?: string; name?: string; phone?: string }
+    customerDetails?: { id?: string; name?: string; phone?: string; email?: string; avatarUrl?: string }
   ): Order => {
     const id = generateOrderId();
-    const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const subtotal = items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
     const tax = 0;
     const total = subtotal + tax;
     const qrToken = generateSecureToken(id);
@@ -461,15 +505,19 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
     let activeUserId = customerDetails?.id;
     let activeUserName = customerDetails?.name;
     let activeUserPhone = customerDetails?.phone;
+    let activeUserEmail = customerDetails?.email;
+    let activeUserAvatar = customerDetails?.avatarUrl;
 
-    if (!activeUserId && typeof window !== 'undefined') {
+    if ((!activeUserId || !activeUserEmail) && typeof window !== 'undefined') {
       try {
         const saved = localStorage.getItem('bc_custom_user');
         if (saved) {
           const parsed = JSON.parse(saved);
-          activeUserId = parsed.id;
-          activeUserName = parsed.name;
-          activeUserPhone = parsed.phone;
+          activeUserId = activeUserId || parsed.id;
+          activeUserName = activeUserName || parsed.name;
+          activeUserPhone = activeUserPhone || parsed.phone;
+          activeUserEmail = activeUserEmail || parsed.email;
+          activeUserAvatar = activeUserAvatar || parsed.avatarUrl;
         }
       } catch {}
     }
@@ -478,7 +526,9 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
       id,
       userId: activeUserId || 'customer-online',
       userName: activeUserName || 'Online Customer',
-      userPhone: activeUserPhone || '+91 98765 43210',
+      userPhone: activeUserPhone || undefined,
+      userEmail: activeUserEmail || undefined,
+      userAvatar: activeUserAvatar || undefined,
       items,
       subtotal,
       tax,

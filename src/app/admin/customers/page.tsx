@@ -1,57 +1,117 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCanteen } from '@/context/CanteenContext';
-import { Users, Trash2, ShieldOff, ShieldCheck, Mail, Phone, ShoppingBag, DollarSign } from 'lucide-react';
+import { Users, ShieldOff, ShieldCheck, Mail, ShoppingBag, DollarSign } from 'lucide-react';
 
 interface CustomerRecord {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  avatarUrl?: string;
   orders: number;
   spent: number;
   status: 'Active' | 'Blocked';
-  avatar: string;
 }
 
 export default function AdminCustomersPage() {
   const { orders } = useCanteen();
   const [search, setSearch] = useState('');
   const [blockedIds, setBlockedIds] = useState<string[]>([]);
+  const [registeredCustomers, setRegisteredCustomers] = useState<any[]>([]);
 
-  // Dynamically group customers strictly by real orders
+  // Load registered customers from persistent local registry
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('bc_registered_customers');
+      if (raw) {
+        setRegisteredCustomers(JSON.parse(raw));
+      }
+    } catch {}
+  }, []);
+
+  // Dynamically compile real customers with DP, name, email & ordering stats
   const customers = useMemo<CustomerRecord[]>(() => {
     const custMap = new Map<string, CustomerRecord>();
-    orders.forEach((o) => {
-      const key = (o.userPhone || o.userName || o.userId).trim();
-      if (!key) return;
 
-      const existing = custMap.get(key) || {
-        id: o.userId || key,
-        name: o.userName || 'Walk-in Customer',
-        email: o.userId && o.userId.includes('@') ? o.userId : `${(o.userName || 'user').toLowerCase().replace(/\s+/g, '.')}@college.edu`,
-        phone: o.userPhone || 'Counter Walk-in',
+    // 1. Seed from registered customer accounts
+    registeredCustomers.forEach((rc) => {
+      const email = (rc.email || '').trim().toLowerCase();
+      if (!email) return;
+      custMap.set(email, {
+        id: rc.id || email,
+        name: rc.name || email.split('@')[0],
+        email: rc.email,
+        avatarUrl: rc.avatarUrl,
         orders: 0,
         spent: 0,
-        status: blockedIds.includes(key) ? 'Blocked' : 'Active',
-        avatar: (o.userName || 'WC').slice(0, 2).toUpperCase(),
+        status: blockedIds.includes(rc.id) || blockedIds.includes(email) ? 'Blocked' : 'Active',
+      });
+    });
+
+    // 2. Also check currently logged-in customer in localStorage
+    try {
+      const savedUser = localStorage.getItem('bc_custom_user');
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        const email = (u?.email || '').trim().toLowerCase();
+        if (email && u?.role === 'customer') {
+          const existing = custMap.get(email) || {
+            id: u.id || email,
+            name: u.name || email.split('@')[0],
+            email: u.email,
+            avatarUrl: u.avatarUrl,
+            orders: 0,
+            spent: 0,
+            status: blockedIds.includes(u.id) || blockedIds.includes(email) ? 'Blocked' : 'Active',
+          };
+          if (u.avatarUrl) existing.avatarUrl = u.avatarUrl;
+          if (u.name) existing.name = u.name;
+          custMap.set(email, existing);
+        }
+      }
+    } catch {}
+
+    // 3. Populate and tally stats from canteen token orders
+    orders.forEach((o) => {
+      const email = (o.userEmail || (o.userId?.includes('@') ? o.userId : '')).trim().toLowerCase();
+      const fallbackKey = email || (o.userName || o.userId || '').trim().toLowerCase();
+      if (!fallbackKey) return;
+
+      const existing = custMap.get(fallbackKey) || {
+        id: o.userId || fallbackKey,
+        name: o.userName || 'Canteen Customer',
+        email: o.userEmail || (fallbackKey.includes('@') ? fallbackKey : `${fallbackKey.replace(/\s+/g, '.')}@college.edu`),
+        avatarUrl: o.userAvatar,
+        orders: 0,
+        spent: 0,
+        status: blockedIds.includes(fallbackKey) ? 'Blocked' : 'Active',
       };
 
+      if (o.userAvatar && !existing.avatarUrl) {
+        existing.avatarUrl = o.userAvatar;
+      }
+      if (o.userName && (!existing.name || existing.name === 'Online Customer')) {
+        existing.name = o.userName;
+      }
+      if (o.userEmail && !existing.email) {
+        existing.email = o.userEmail;
+      }
+
       existing.orders += 1;
-      if (o.paymentStatus === 'VERIFIED') {
+      if (o.paymentStatus === 'VERIFIED' || o.orderStatus === 'PAID' || o.orderStatus === 'READY' || o.orderStatus === 'SERVED') {
         existing.spent += o.total;
       }
-      custMap.set(key, existing);
+      custMap.set(fallbackKey, existing);
     });
+
     return Array.from(custMap.values());
-  }, [orders, blockedIds]);
+  }, [registeredCustomers, orders, blockedIds]);
 
   const filtered = customers.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase()) ||
-      c.phone.includes(search)
+      c.email.toLowerCase().includes(search.toLowerCase())
   );
 
   const totalOrders = customers.reduce((s, c) => s + c.orders, 0);
@@ -69,9 +129,9 @@ export default function AdminCustomersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#201611] tracking-tight">Customers</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-[#201611] tracking-tight">Customer Management</h1>
           <p className="text-xs sm:text-sm text-[#5C4E46] mt-0.5">
-            Verified campus customers and ordering history
+            Verified campus customers, profile display pictures & digital ordering history
           </p>
         </div>
       </div>
@@ -87,7 +147,7 @@ export default function AdminCustomersPage() {
           <p className="text-[10px] font-bold text-stone-400 uppercase mt-0.5">Active</p>
         </div>
         <div className="bg-white p-4 rounded-3xl border border-stone-200 shadow-2xs text-center">
-          <p className="text-2xl font-black text-[#FF5722]">₹{totalSpent}</p>
+          <p className="text-2xl font-black text-[#FF5722]">₹{totalSpent.toLocaleString('en-IN')}</p>
           <p className="text-[10px] font-bold text-stone-400 uppercase mt-0.5">Total Spent</p>
         </div>
       </div>
@@ -98,8 +158,8 @@ export default function AdminCustomersPage() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by customer name, email or phone..."
-          className="w-full px-4 py-2 text-xs border border-stone-200 rounded-xl bg-stone-50 text-[#201611] focus:outline-none focus:border-[#FF5722]"
+          placeholder="Search by customer name or email address..."
+          className="w-full px-4 py-2.5 text-xs border border-stone-200 rounded-2xl bg-stone-50 text-[#201611] focus:outline-none focus:border-[#FF5722]"
         />
       </div>
 
@@ -113,34 +173,46 @@ export default function AdminCustomersPage() {
             <h3 className="text-sm font-bold text-[#201611]">No Customers Found</h3>
             <p className="text-xs text-stone-400">
               {customers.length === 0
-                ? 'Customers will automatically appear here as tokens and orders are placed.'
+                ? 'Customers will automatically appear here as accounts register and digital tokens are ordered.'
                 : 'No customers match your current search criteria.'}
             </p>
           </div>
         </div>
       ) : (
         <>
-          {/* Mobile Cards */}
+          {/* Mobile Cards (No mobile numbers shown) */}
           <div className="sm:hidden space-y-3">
             {filtered.map((c) => (
               <div
                 key={c.id}
-                className={`bg-white rounded-3xl p-4 border shadow-xs space-y-3 ${
+                className={`bg-white rounded-3xl p-4 border shadow-xs space-y-3.5 ${
                   c.status === 'Blocked' ? 'border-red-200 opacity-75' : 'border-stone-200'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#201611] to-stone-700 text-white flex items-center justify-center font-black text-xs shrink-0">
-                      {c.avatar}
+                    {/* Customer DP */}
+                    <div className="w-11 h-11 rounded-2xl ring-2 ring-stone-200 overflow-hidden bg-stone-100 shrink-0 flex items-center justify-center">
+                      {c.avatarUrl ? (
+                        <img
+                          src={c.avatarUrl}
+                          alt={c.name}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-[#FF5722] to-orange-700 text-white flex items-center justify-center font-black text-sm">
+                          {(c.name || 'C').charAt(0).toUpperCase()}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <p className="font-bold text-sm text-[#201611]">{c.name}</p>
-                      <p className="text-[10px] text-[#8C7E76]">{c.email}</p>
+                      <p className="text-[11px] text-[#8C7E76] break-all">{c.email}</p>
                     </div>
                   </div>
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
                       c.status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-700'
                     }`}
                   >
@@ -148,29 +220,27 @@ export default function AdminCustomersPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs text-stone-500">
-                  <span className="flex items-center gap-1">
-                    <ShoppingBag className="w-3 h-3" />
-                    {c.orders} orders
+                <div className="flex items-center justify-between text-xs text-stone-500 pt-1 border-t border-stone-100">
+                  <span className="flex items-center gap-1 font-semibold text-stone-700">
+                    <ShoppingBag className="w-3.5 h-3.5 text-[#FF5722]" />
+                    {c.orders} {c.orders === 1 ? 'token' : 'tokens'}
                   </span>
-                  <span className="flex items-center gap-1 font-bold text-[#FF5722]">₹{c.spent}</span>
-                  <span className="flex items-center gap-1">
-                    <Phone className="w-3 h-3" />
-                    {c.phone}
+                  <span className="font-black text-[#FF5722]">
+                    Total Spent: ₹{c.spent.toLocaleString('en-IN')}
                   </span>
                 </div>
 
-                <div className="flex gap-2 pt-1 border-t border-stone-100">
+                <div className="pt-1">
                   <button
                     onClick={() => toggleBlock(c.id)}
-                    className={`flex-1 py-1.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 transition ${
+                    className={`w-full py-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition ${
                       c.status === 'Active'
                         ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
                         : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                     }`}
                   >
-                    {c.status === 'Active' ? <ShieldOff className="w-3 h-3" /> : <ShieldCheck className="w-3 h-3" />}
-                    {c.status === 'Active' ? 'Block' : 'Unblock'}
+                    {c.status === 'Active' ? <ShieldOff className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                    {c.status === 'Active' ? 'Block Account' : 'Unblock Account'}
                   </button>
                 </div>
               </div>
@@ -184,8 +254,8 @@ export default function AdminCustomersPage() {
                 <thead className="bg-[#FAF8F5] border-b border-stone-200 text-[#8C7E76] uppercase font-bold">
                   <tr>
                     <th className="p-4">Customer</th>
-                    <th className="p-4">Contact</th>
-                    <th className="p-4">Orders Placed</th>
+                    <th className="p-4">Email Address</th>
+                    <th className="p-4">Tokens Ordered</th>
                     <th className="p-4">Total Spent</th>
                     <th className="p-4">Status</th>
                     <th className="p-4 text-right">Action</th>
@@ -196,18 +266,30 @@ export default function AdminCustomersPage() {
                     <tr key={c.id} className="hover:bg-[#FAF8F5]/80 transition">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#201611] to-stone-700 text-white flex items-center justify-center font-black text-xs shrink-0">
-                            {c.avatar}
+                          {/* Customer DP */}
+                          <div className="w-10 h-10 rounded-2xl ring-2 ring-stone-200 overflow-hidden bg-stone-100 shrink-0 flex items-center justify-center">
+                            {c.avatarUrl ? (
+                              <img
+                                src={c.avatarUrl}
+                                alt={c.name}
+                                className="w-full h-full object-cover"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-[#FF5722] to-orange-700 text-white flex items-center justify-center font-black text-sm">
+                                {(c.name || 'C').charAt(0).toUpperCase()}
+                              </div>
+                            )}
                           </div>
                           <div>
-                            <p className="font-bold text-[#201611]">{c.name}</p>
-                            <p className="text-[10px] text-[#8C7E76]">{c.email}</p>
+                            <p className="font-bold text-sm text-[#201611]">{c.name}</p>
+                            <span className="text-[10px] text-stone-400 font-medium">Verified Campus Member</span>
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 text-stone-600">{c.phone}</td>
+                      <td className="p-4 font-semibold text-stone-700">{c.email}</td>
                       <td className="p-4 font-bold text-stone-700">{c.orders} tokens</td>
-                      <td className="p-4 font-black text-[#FF5722]">₹{c.spent}</td>
+                      <td className="p-4 font-black text-[#FF5722]">₹{c.spent.toLocaleString('en-IN')}</td>
                       <td className="p-4">
                         <span
                           className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
@@ -220,7 +302,7 @@ export default function AdminCustomersPage() {
                       <td className="p-4 text-right">
                         <button
                           onClick={() => toggleBlock(c.id)}
-                          className="px-3 py-1 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-[11px] transition"
+                          className="px-3.5 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-[11px] transition"
                         >
                           {c.status === 'Active' ? 'Block' : 'Unblock'}
                         </button>

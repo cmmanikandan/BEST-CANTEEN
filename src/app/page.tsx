@@ -3,7 +3,9 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCanteen } from '@/context/CanteenContext';
+import { useAuth } from '@/context/AuthContext';
 import {
   ArrowRight,
   ShieldCheck,
@@ -21,7 +23,30 @@ import { motion } from 'framer-motion';
 import { BrandLogo } from '@/components/common/BrandLogo';
 
 export default function LandingPage() {
+  const router = useRouter();
+  const { user, role, isLoaded } = useAuth();
   const { foods, activeMealInfo } = useCanteen();
+
+  // Automatic redirect if already logged in
+  React.useEffect(() => {
+    if (isLoaded && user) {
+      if (role === 'admin' || user.role === 'admin') {
+        router.replace('/admin/dashboard');
+      } else if (role === 'server' || user.role === 'server') {
+        router.replace('/server/dashboard');
+      } else {
+        router.replace('/customer/home');
+      }
+    }
+  }, [isLoaded, user, role, router]);
+
+  if (isLoaded && user) {
+    return (
+      <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-[#FF5722] border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   const steps = [
     {

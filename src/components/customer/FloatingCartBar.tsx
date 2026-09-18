@@ -46,7 +46,7 @@ export function FloatingCartBar() {
                 {totalItems} {totalItems === 1 ? 'item' : 'items'} in cart
               </p>
               <p className="text-sm font-bold text-white tracking-wide">
-                ₹{total.toLocaleString('en-IN')}
+                ₹{(total || 0).toLocaleString('en-IN')}
               </p>
             </div>
           </div>

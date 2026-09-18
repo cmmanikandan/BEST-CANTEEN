@@ -53,7 +53,8 @@ export default function CustomerCheckoutPage() {
       const newOrder = createOrder(orderItems, undefined, {
         id: user?.id,
         name: user?.name,
-        phone: user && 'phone' in user ? user.phone : undefined,
+        email: 'email' in (user || {}) ? (user as any).email : undefined,
+        avatarUrl: 'avatarUrl' in (user || {}) ? (user as any).avatarUrl : undefined,
       });
       const mockPaymentId = `pay_RPZ${Date.now()}`;
       const verified = verifyPayment(newOrder.id, mockPaymentId);
@@ -221,7 +222,7 @@ export default function CustomerCheckoutPage() {
         <div className="flex items-center justify-between text-xs sm:text-sm">
           <div>
             <p className="font-bold text-[#201611]">{user?.name || 'Customer'}</p>
-            <p className="text-[#5C4E46] text-xs">{('phone' in (user || {})) ? (user as any).phone : '+91 98765 43210'}</p>
+            <p className="text-[#5C4E46] text-xs">{('email' in (user || {})) ? (user as any).email : ''}</p>
           </div>
           <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
             Verified Student

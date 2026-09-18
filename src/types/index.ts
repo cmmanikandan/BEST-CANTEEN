@@ -54,7 +54,9 @@ export interface Order {
   id: string; // e.g. "BC10482"
   userId: string;
   userName: string;
-  userPhone: string;
+  userPhone?: string;
+  userEmail?: string;
+  userAvatar?: string;
   items: OrderItem[];
   subtotal: number;
   tax: number;
@@ -89,7 +91,7 @@ export interface CustomerUser {
   id: string;
   name: string;
   email: string;
-  phone: string;
+  phone?: string;
   role: 'customer';
   rollNumber?: string;
   avatarUrl?: string;

@@ -177,74 +177,106 @@ export default function CustomerHomePage() {
       {/* Default Sections when 'all' is selected */}
       {selectedCategory === 'all' && (
         <>
-          {/* 4. CURRENT ACTIVE MEAL MENU (e.g. Lunch or Breakfast right now) - Shown First! */}
-          <section className="space-y-3 pt-1">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{activeMealInfo.icon}</span>
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-[#201611]">
-                    {activeMealInfo.name} Menu · Now Serving
-                  </h2>
-                  <p className="text-xs text-[#5C4E46]">{activeMealInfo.statusText}</p>
-                </div>
+          {visibleFoods.length === 0 ? (
+            <section className="bg-white rounded-3xl p-10 text-center border border-stone-200/80 shadow-xs space-y-3">
+              <div className="w-14 h-14 rounded-full bg-orange-50 text-[#FF5722] flex items-center justify-center mx-auto text-2xl">
+                🍳
               </div>
-              <Link
-                href="/customer/menu"
-                className="text-xs font-semibold text-[#FF5722] hover:underline flex items-center gap-1"
-              >
-                <span>View all</span>
-                <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {currentMealFoods.map((food) => (
-                <FoodCard key={food.id} food={food} />
-              ))}
-            </div>
-          </section>
+              <h3 className="font-bold text-base text-[#201611]">Canteen Menu Updating</h3>
+              <p className="text-xs text-[#5C4E46] max-w-md mx-auto">
+                Today&apos;s freshly prepared dishes will appear here as updated at the canteen counter.
+              </p>
+            </section>
+          ) : (
+            <>
+              {/* 4. CURRENT ACTIVE MEAL MENU (e.g. Lunch or Breakfast right now) */}
+              {currentMealFoods.length > 0 && (
+                <section className="space-y-3 pt-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{activeMealInfo.icon}</span>
+                      <div>
+                        <h2 className="text-base sm:text-lg font-bold text-[#201611]">
+                          {activeMealInfo.name} Menu · Now Serving
+                        </h2>
+                        <p className="text-xs text-[#5C4E46]">{activeMealInfo.statusText}</p>
+                      </div>
+                    </div>
+                    <Link
+                      href="/customer/menu"
+                      className="text-xs font-semibold text-[#FF5722] hover:underline flex items-center gap-1"
+                    >
+                      <span>View all</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                    {currentMealFoods.map((food) => (
+                      <FoodCard key={food.id} food={food} />
+                    ))}
+                  </div>
+                </section>
+              )}
 
-          {/* 5. Popular Food Section */}
-          <section className="space-y-3 pt-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-orange-100 text-[#FF5722] flex items-center justify-center">
-                  <Flame className="w-4 h-4 fill-[#FF5722]" />
-                </div>
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-[#201611]">
-                    Popular Right Now
-                  </h2>
-                  <p className="text-xs text-[#5C4E46]">Most loved by students</p>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {popularFoods.map((food) => (
-                <FoodCard key={food.id} food={food} />
-              ))}
-            </div>
-          </section>
+              {/* 5. Popular Food Section */}
+              {popularFoods.length > 0 && (
+                <section className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-xl bg-orange-100 text-[#FF5722] flex items-center justify-center">
+                        <Flame className="w-4 h-4 fill-[#FF5722]" />
+                      </div>
+                      <div>
+                        <h2 className="text-base sm:text-lg font-bold text-[#201611]">
+                          Popular Right Now
+                        </h2>
+                        <p className="text-xs text-[#5C4E46]">Most loved by students</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                    {popularFoods.map((food) => (
+                      <FoodCard key={food.id} food={food} />
+                    ))}
+                  </div>
+                </section>
+              )}
 
-          {/* 6. Snacks — Available All Day */}
-          <section className="space-y-3 pt-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🍪</span>
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-[#201611]">
-                    Snacks & Beverages
-                  </h2>
-                  <p className="text-xs text-[#5C4E46]">Freshly made and available all day</p>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {snacksFoods.map((food) => (
-                <FoodCard key={food.id} food={food} />
-              ))}
-            </div>
-          </section>
+              {/* 6. Snacks — Available All Day */}
+              {snacksFoods.length > 0 && (
+                <section className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">🍪</span>
+                      <div>
+                        <h2 className="text-base sm:text-lg font-bold text-[#201611]">
+                          Snacks & Beverages
+                        </h2>
+                        <p className="text-xs text-[#5C4E46]">Freshly made and available all day</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                    {snacksFoods.map((food) => (
+                      <FoodCard key={food.id} food={food} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* If none of category subsets matched but visible foods exist */}
+              {currentMealFoods.length === 0 && popularFoods.length === 0 && snacksFoods.length === 0 && (
+                <section className="space-y-3 pt-1">
+                  <h2 className="text-base sm:text-lg font-bold text-[#201611]">All Available Dishes</h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                    {visibleFoods.map((food) => (
+                      <FoodCard key={food.id} food={food} />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </>
+          )}
 
           {/* 7. Quick Reorder / Recent Orders */}
           {orders.length > 0 && (
