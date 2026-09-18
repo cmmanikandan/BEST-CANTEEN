@@ -28,6 +28,7 @@ export default function LandingPage() {
   const { foods, activeMealInfo } = useCanteen();
 
   const [checkingAuth, setCheckingAuth] = React.useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const redirectTriggeredRef = React.useRef(false);
 
   React.useEffect(() => {
@@ -105,8 +106,6 @@ export default function LandingPage() {
       icon: CheckCircle2,
     },
   ];
-
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#201611]">
