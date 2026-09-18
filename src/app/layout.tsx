@@ -31,6 +31,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preload" href="/splash-bg.png" as="image" type="image/png" />
+      </head>
       <body className="min-h-screen bg-[#FDFBF7] text-[#201611] antialiased selection:bg-orange-100 selection:text-orange-900">
         <AuthProvider>
           <CanteenProvider>

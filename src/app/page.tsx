@@ -30,9 +30,23 @@ export default function LandingPage() {
   const { foods, activeMealInfo } = useCanteen();
 
   const [splashFinished, setSplashFinished] = React.useState(false);
+  const redirectTriggeredRef = React.useRef(false);
+
+  // Synchronously check if credentials exist in localStorage with 0ms delay
+  const hasLocalSession = React.useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return !!(localStorage.getItem('bc_user_role') && localStorage.getItem('bc_custom_user'));
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const isUserLoggedIn = hasLocalSession || !!user;
 
   React.useEffect(() => {
-    // Check if user session exists in storage or auth
+    if (redirectTriggeredRef.current) return;
+
     let savedRole: string | null = null;
     let savedUser: string | null = null;
     try {
@@ -40,33 +54,36 @@ export default function LandingPage() {
       savedUser = localStorage.getItem('bc_custom_user');
     } catch {}
 
-    const isUserLoggedIn = !!(savedRole && savedUser) || (isLoaded && !!user);
+    const loggedIn = !!(savedRole && savedUser) || (isLoaded && !!user);
 
-    if (isUserLoggedIn) {
+    if (loggedIn) {
+      redirectTriggeredRef.current = true;
       const activeRole = savedRole || role || user?.role || 'customer';
-      // Logged in: Splash screen -> Direct to Dashboard (Landing page is NEVER shown)
+      const destination =
+        activeRole === 'admin'
+          ? '/admin/dashboard'
+          : activeRole === 'server'
+          ? '/server/dashboard'
+          : '/customer/home';
+
+      // Keep splash screen steadily visible, then navigate directly to destination
       const timer = setTimeout(() => {
-        if (activeRole === 'admin') {
-          router.replace('/admin/dashboard');
-        } else if (activeRole === 'server') {
-          router.replace('/server/dashboard');
-        } else {
-          router.replace('/customer/home');
-        }
-      }, 950);
+        router.replace(destination);
+      }, 1200);
       return () => clearTimeout(timer);
-    } else if (isLoaded && !user) {
-      // Guest: Splash screen -> Landing page
+    } else if (isLoaded && !user && !savedUser) {
+      // Guest: show splash screen steadily then transition to landing page
+      redirectTriggeredRef.current = true;
       const timer = setTimeout(() => {
         setSplashFinished(true);
-      }, 1200);
+      }, 1400);
       return () => clearTimeout(timer);
     }
   }, [isLoaded, user, role, router]);
 
   // WHILE SPLASH IS ACTIVE OR USER IS LOGGED IN:
   // Render ONLY the Splash Screen. The landing page HTML is never rendered underneath.
-  if (!splashFinished || user) {
+  if (!splashFinished || isUserLoggedIn) {
     return (
       <div className="fixed inset-0 z-50 overflow-hidden bg-[#FDFBF7]">
         <MobileSplash isVisible={true} />
