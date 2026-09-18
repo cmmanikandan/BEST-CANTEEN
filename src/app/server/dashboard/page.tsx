@@ -71,18 +71,45 @@ export default function ServerDashboardPage() {
       {/* Recent Served Tokens */}
       {servedOrders.length > 0 && (
         <div className="bg-white rounded-3xl p-5 border border-stone-200 shadow-xs space-y-3">
-          <p className="text-xs font-bold text-[#201611] flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
-            Scanned Tokens Today
-          </p>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-[#201611] flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-[#16A34A]" />
+              Scanned Tokens & Served Food Today
+            </p>
+            <span className="text-[11px] font-bold text-stone-500 bg-stone-100 px-2 py-0.5 rounded-lg">
+              {servedOrders.length} Served
+            </span>
+          </div>
+          <div className="space-y-2.5 max-h-72 overflow-y-auto">
             {servedOrders.map((ord) => (
-              <div key={ord.id} className="flex items-center justify-between p-3 rounded-2xl bg-[#FAF8F5] border border-stone-100">
-                <div>
-                  <span className="font-black text-xs text-[#FF5722]">#{ord.id}</span>
-                  <p className="text-[11px] text-stone-500 mt-0.5">{ord.userName}</p>
+              <div key={ord.id} className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-stone-200/80 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-xs text-[#FF5722]">Token #{ord.id}</span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                      ✓ Served
+                    </span>
+                  </div>
+                  <span className="font-black text-sm text-[#16A34A]">₹{ord.total}</span>
                 </div>
-                <span className="font-black text-sm text-[#16A34A]">₹{ord.total}</span>
+
+                {/* The food dishes served */}
+                <div className="text-xs text-[#201611] font-bold flex flex-wrap gap-1">
+                  {ord.items.map((it, idx) => (
+                    <span key={idx} className="inline-block bg-white px-2 py-0.5 rounded-md border border-stone-200 shadow-2xs">
+                      {it.name} <strong className="text-[#FF5722]">×{it.quantity}</strong>
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] text-stone-400 pt-0.5 border-t border-stone-200/50">
+                  <span>Customer: <strong className="text-stone-600">{ord.userName}</strong></span>
+                  <span>
+                    {ord.servedAt
+                      ? new Date(ord.servedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+                      : 'Served'}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

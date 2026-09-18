@@ -137,10 +137,27 @@ export default function AdminServersPage() {
   }, []);
 
   // Calculate real served count dynamically from verified canteen orders
-  const getServedCount = (staffName: string) => {
-    return orders.filter(
-      (o) => o.orderStatus === 'SERVED' && (o.servedBy === staffName || o.servedBy?.includes(staffName))
-    ).length;
+  const getServedStats = (staffName: string) => {
+    const staffOrders = orders.filter((o) => {
+      if (o.orderStatus !== 'SERVED') return false;
+      if (o.servedBy) {
+        const sLower = staffName.toLowerCase();
+        const byLower = o.servedBy.toLowerCase();
+        if (byLower.includes(sLower) || sLower.includes(byLower)) {
+          return true;
+        }
+      }
+      // If only 1 staff member exists or order was served under default 'Canteen Server'/'Food Server'
+      if (staff.length === 1 || o.servedBy === 'Canteen Server' || o.servedBy === 'Food Server') {
+        return true;
+      }
+      return false;
+    });
+
+    return {
+      count: staffOrders.length,
+      revenue: staffOrders.reduce((acc, o) => acc + (o.total || 0), 0),
+    };
   };
 
   const openAdd = () => {
@@ -297,82 +314,123 @@ export default function AdminServersPage() {
         </div>
       )}
 
-      {/* Staff Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {staff.map((s) => {
-          const initials = s.name
-            .split(' ')
-            .map((n) => n[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2);
-          const servedCount = getServedCount(s.name);
+      {/* Loading Skeletons */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="bg-white rounded-3xl p-5 border border-stone-200 shadow-2xs space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-stone-200" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-stone-200 rounded-md w-3/4" />
+                  <div className="h-3 bg-stone-100 rounded-md w-1/2" />
+                </div>
+              </div>
+              <div className="h-14 bg-stone-100 rounded-2xl" />
+              <div className="h-6 bg-stone-50 rounded-xl" />
+            </div>
+          ))}
+        </div>
+      ) : staff.length === 0 ? (
+        /* Empty State */
+        <div className="bg-white rounded-3xl p-10 sm:p-14 text-center border-2 border-dashed border-stone-200/90 shadow-2xs space-y-4 max-w-lg mx-auto">
+          <div className="w-16 h-16 rounded-3xl bg-orange-50 text-[#FF5722] flex items-center justify-center mx-auto shadow-inner">
+            <Store className="w-8 h-8" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-black text-[#201611]">No Counter Staff Yet</h3>
+            <p className="text-xs text-[#5C4E46] leading-relaxed">
+              Add your counter staff accounts so team members can log in at the counter terminal (/server/login), verify QR tokens, and serve meals.
+            </p>
+          </div>
+          <button
+            onClick={openAdd}
+            className="px-6 py-3 bg-[#FF5722] hover:bg-[#F4511E] text-white font-bold text-xs rounded-2xl inline-flex items-center gap-2 shadow-md transition active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add First Staff Account</span>
+          </button>
+        </div>
+      ) : (
+        /* Staff Grid */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {staff.map((s) => {
+            const initials = s.name
+              .split(' ')
+              .map((n) => n[0])
+              .join('')
+              .toUpperCase()
+              .slice(0, 2);
+            const { count: servedCount, revenue: servedRev } = getServedStats(s.name);
 
-          return (
-            <div
-              key={s.id}
-              className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-2xs space-y-4 hover:shadow-xs transition"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-stone-900 to-stone-750 text-white font-black text-sm flex items-center justify-center shadow-xs">
-                    {initials}
+            return (
+              <div
+                key={s.id}
+                className="bg-white rounded-3xl p-5 border border-stone-200/90 shadow-2xs space-y-4 hover:shadow-xs transition"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-stone-900 to-stone-750 text-white font-black text-sm flex items-center justify-center shadow-xs">
+                      {initials}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-[#201611]">{s.name}</h3>
+                      <p className="text-xs text-stone-500">{s.counterNumber}</p>
+                      <p className="text-[11px] text-[#8C7E76] font-medium">{s.email}</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => toggleStatus(s.id)}
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border transition ${STATUS_COLORS[s.status]}`}
+                    title="Click to toggle status"
+                  >
+                    {s.status}
+                  </button>
+                </div>
+
+                {/* Stats Bar */}
+                <div className="grid grid-cols-2 gap-2 bg-[#FAF8F5] rounded-2xl p-3 text-center border border-stone-100">
+                  <div>
+                    <p className="text-xs font-bold text-stone-500 uppercase">Assigned</p>
+                    <p className="text-xs font-black text-[#201611] truncate">{s.role}</p>
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm text-[#201611]">{s.name}</h3>
-                    <p className="text-xs text-stone-500">{s.counterNumber}</p>
-                    <p className="text-[11px] text-[#8C7E76] font-medium">{s.email}</p>
+                    <p className="text-xs font-bold text-stone-500 uppercase">Served Today</p>
+                    <p className="text-sm font-black text-[#FF5722]">
+                      {servedCount} {servedCount > 0 && servedRev > 0 ? `(₹${servedRev})` : ''}
+                    </p>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => toggleStatus(s.id)}
-                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border transition ${STATUS_COLORS[s.status]}`}
-                  title="Click to toggle status"
-                >
-                  {s.status}
-                </button>
-              </div>
+                {/* Actions */}
+                <div className="flex items-center justify-between pt-1 border-t border-stone-100 text-xs">
+                  <div className="flex items-center gap-1.5 text-[11px] text-stone-400 font-mono">
+                    <span>Pass: ••••••••</span>
+                  </div>
 
-              {/* Stats Bar */}
-              <div className="grid grid-cols-2 gap-2 bg-[#FAF8F5] rounded-2xl p-3 text-center border border-stone-100">
-                <div>
-                  <p className="text-xs font-bold text-stone-500 uppercase">Assigned</p>
-                  <p className="text-xs font-black text-[#201611] truncate">{s.role}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-stone-500 uppercase">Served Today</p>
-                  <p className="text-sm font-black text-[#FF5722]">{servedCount}</p>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center justify-between pt-1 border-t border-stone-100 text-xs">
-                <div className="flex items-center gap-1.5 text-[11px] text-stone-400 font-mono">
-                  <span>Pass: ••••••••</span>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => openEdit(s)}
-                    className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-100 rounded-xl transition"
-                    title="Edit account"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setDeletingStaff(s)}
-                    className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition"
-                    title="Remove staff"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => openEdit(s)}
+                      className="p-2 text-stone-500 hover:text-stone-800 hover:bg-stone-100 rounded-xl transition"
+                      title="Edit account"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setDeletingStaff(s)}
+                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition"
+                      title="Remove staff"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* ── CREATE / EDIT STAFF MODAL ── */}
       {showModal && (

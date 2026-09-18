@@ -16,9 +16,17 @@ export default function ServerProfilePage() {
   const servedOrders = orders.filter((o) => o.orderStatus === 'SERVED');
   const servedRevenue = servedOrders.reduce((s, o) => s + o.total, 0);
 
+  const staffName = user?.name || 'Kamalesh';
+  const staffInitials = staffName
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push('/');
   };
 
   return (
@@ -36,14 +44,14 @@ export default function ServerProfilePage() {
       <div className="bg-white rounded-3xl p-5 border border-stone-200 shadow-xs relative overflow-hidden">
         <div className="absolute top-0 right-0 w-28 h-28 bg-orange-500/5 rounded-full blur-2xl -mr-8 -mt-8" />
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#201611] to-stone-700 text-white flex items-center justify-center text-2xl font-black shadow-md shrink-0">
-            RK
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#201611] to-stone-750 text-white flex items-center justify-center text-xl font-black shadow-md shrink-0">
+            {staffInitials}
           </div>
-          <div className="flex-1">
-            <h2 className="text-lg font-black text-[#201611]">
-              {user?.name || 'Ramesh Kumar'}
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-black text-[#201611] truncate">
+              {staffName}
             </h2>
-            <p className="text-xs text-[#8C7E76]">Staff ID: BC-SRV-04</p>
+            <p className="text-xs text-[#8C7E76]">{user?.email || 'kamalesh30707@gmail.com'}</p>
             <span className="mt-1 inline-block bg-[#FF5722]/10 text-[#FF5722] text-[10px] font-black uppercase px-2 py-0.5 rounded">
               Counter Staff
             </span>
@@ -61,6 +69,47 @@ export default function ServerProfilePage() {
           <p className="text-2xl font-black text-[#FF5722]">₹{servedRevenue}</p>
           <p className="text-[10px] font-bold text-stone-400 uppercase">Value Served</p>
         </div>
+      </div>
+
+      {/* Recently Served Food Dishes */}
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-stone-200 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold text-xs text-[#201611] uppercase tracking-wider">
+            Recently Served Food ({servedOrders.length})
+          </h3>
+          <Link href="/server/history" className="text-[11px] font-bold text-[#FF5722] hover:underline">
+            View History →
+          </Link>
+        </div>
+
+        {servedOrders.length === 0 ? (
+          <p className="text-xs text-stone-400 py-3 text-center">No orders served yet today.</p>
+        ) : (
+          <div className="divide-y divide-stone-100">
+            {servedOrders.slice(0, 5).map((ord) => (
+              <div key={ord.id} className="py-2.5 flex items-start justify-between gap-3 text-xs">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-stone-900">#{ord.id}</span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                      ✓ Served
+                    </span>
+                  </div>
+                  {/* Food names */}
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {ord.items.map((i, idx) => (
+                      <span key={idx} className="text-[11px] font-bold text-[#201611] bg-stone-100 px-1.5 py-0.5 rounded">
+                        {i.name} <strong className="text-[#FF5722]">×{i.quantity}</strong>
+                      </span>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-stone-400 mt-1">Customer: {ord.userName}</p>
+                </div>
+                <span className="font-black text-[#16A34A] shrink-0 text-sm">₹{ord.total}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Quick Links */}

@@ -16,8 +16,10 @@ import {
   Clock,
   ArrowRight,
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ServerScannerPage() {
+  const { user } = useAuth();
   const { serveOrder, orders } = useCanteen();
 
   const [cameraActive, setCameraActive] = useState(false);
@@ -97,7 +99,8 @@ export default function ServerScannerPage() {
       }
 
       setIsProcessing(true);
-      const res = serveOrder(trimmed, 'Canteen Server');
+      const serverStaffName = user?.name || 'Kamalesh';
+      const res = serveOrder(trimmed, serverStaffName);
       setIsProcessing(false);
 
       if (res.success && res.order) {

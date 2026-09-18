@@ -75,6 +75,7 @@ export interface Order {
 export interface ServerUser {
   id: string;
   name: string;
+  email?: string;
   counterNumber: string;
   role: 'server';
 }
