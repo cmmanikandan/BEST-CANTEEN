@@ -27,8 +27,19 @@ export default function LandingPage() {
   const { user, role, isLoaded } = useAuth();
   const { foods, activeMealInfo } = useCanteen();
 
-  // Automatic redirect if already logged in
+  // Immediate synchronous redirect if localStorage session exists
   React.useEffect(() => {
+    try {
+      const savedRole = localStorage.getItem('bc_user_role');
+      const savedUser = localStorage.getItem('bc_custom_user');
+      if (savedRole && savedUser) {
+        if (savedRole === 'admin') router.replace('/admin/dashboard');
+        else if (savedRole === 'server') router.replace('/server/dashboard');
+        else router.replace('/customer/home');
+        return;
+      }
+    } catch {}
+
     if (isLoaded && user) {
       if (role === 'admin' || user.role === 'admin') {
         router.replace('/admin/dashboard');
@@ -40,7 +51,8 @@ export default function LandingPage() {
     }
   }, [isLoaded, user, role, router]);
 
-  if (isLoaded && user) {
+  // NEVER render the landing page until auth has fully resolved AND confirmed user is a guest
+  if (!isLoaded || user) {
     return (
       <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
         <div className="w-8 h-8 rounded-full border-2 border-[#FF5722] border-t-transparent animate-spin" />

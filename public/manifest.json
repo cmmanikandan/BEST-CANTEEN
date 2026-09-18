@@ -2,7 +2,7 @@
   "name": "Best Canteen",
   "short_name": "BestCanteen",
   "description": "Good Food · Brighter Days - Digital Canteen Ordering & QR Token System",
-  "start_url": "/",
+  "start_url": "/customer/home",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#FF5722",
