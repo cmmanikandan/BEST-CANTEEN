@@ -54,11 +54,12 @@ export default function CustomerHomePage() {
   // Filtered by selected category
   const filteredFoods = useMemo(() => {
     if (selectedCategory === 'all') return visibleFoods;
-    return visibleFoods.filter(
-      (f) =>
-        f.category === selectedCategory ||
-        (Array.isArray(f.availableMeals) && f.availableMeals.includes(selectedCategory))
-    );
+    return visibleFoods.filter((f) => {
+      const meals = Array.isArray(f.availableMeals) && f.availableMeals.length > 0
+        ? f.availableMeals
+        : [f.category];
+      return f.category === selectedCategory || meals.includes(selectedCategory);
+    });
   }, [visibleFoods, selectedCategory]);
 
   // Popular items
@@ -68,20 +69,22 @@ export default function CustomerHomePage() {
 
   // Current meal items
   const currentMealFoods = useMemo(() => {
-    return visibleFoods.filter(
-      (f) =>
-        f.category === activeMealInfo.category ||
-        (Array.isArray(f.availableMeals) && f.availableMeals.includes(activeMealInfo.category))
-    );
+    return visibleFoods.filter((f) => {
+      const meals = Array.isArray(f.availableMeals) && f.availableMeals.length > 0
+        ? f.availableMeals
+        : [f.category];
+      return f.category === activeMealInfo.category || meals.includes(activeMealInfo.category);
+    });
   }, [visibleFoods, activeMealInfo.category]);
 
   // Snacks items (all day)
   const snacksFoods = useMemo(() => {
-    return visibleFoods.filter(
-      (f) =>
-        f.category === 'snacks' ||
-        (Array.isArray(f.availableMeals) && f.availableMeals.includes('snacks'))
-    );
+    return visibleFoods.filter((f) => {
+      const meals = Array.isArray(f.availableMeals) && f.availableMeals.length > 0
+        ? f.availableMeals
+        : [f.category];
+      return f.category === 'snacks' || meals.includes('snacks');
+    });
   }, [visibleFoods]);
 
   // Handle search submit

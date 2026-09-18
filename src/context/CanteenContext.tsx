@@ -98,7 +98,19 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
       const savedFoods = localStorage.getItem('bc_foods');
       if (savedFoods) {
         const parsedFoods: FoodItem[] = JSON.parse(savedFoods);
-        setFoods(parsedFoods);
+        const cleanedFoods = parsedFoods.map((f) => {
+          if (
+            f.category !== 'snacks' &&
+            Array.isArray(f.availableMeals) &&
+            f.availableMeals.length === 2 &&
+            f.availableMeals.includes('snacks') &&
+            f.availableMeals.includes(f.category)
+          ) {
+            return { ...f, availableMeals: [f.category] };
+          }
+          return f;
+        });
+        setFoods(cleanedFoods);
       }
 
       const savedSchedules = localStorage.getItem('bc_meal_schedules');

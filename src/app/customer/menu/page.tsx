@@ -40,10 +40,13 @@ export default function CustomerMenuPage() {
     return foods
       .filter((food) => {
         if (!food.isVisible) return false;
+        const meals = Array.isArray(food.availableMeals) && food.availableMeals.length > 0
+          ? food.availableMeals
+          : [food.category];
         const matchCat =
           selectedCategory === 'all' ||
           food.category === selectedCategory ||
-          (Array.isArray(food.availableMeals) && food.availableMeals.includes(selectedCategory));
+          meals.includes(selectedCategory);
         if (!matchCat) return false;
         if (vegOnly && !food.isVeg) return false;
         if (availableOnly && !food.isAvailable) return false;

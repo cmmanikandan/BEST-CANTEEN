@@ -66,9 +66,25 @@ export function mapOrderToDb(order: Order) {
 export function mapFoodFromDb(row: any): FoodItem {
   const cat = (row.category || 'lunch') as MealCategory;
   const rawMeals = Array.isArray(row.available_meals) ? row.available_meals : [];
-  const availableMeals = rawMeals.length > 0
-    ? (rawMeals.includes(cat) ? rawMeals : [...rawMeals, cat])
-    : [cat, 'snacks'];
+  
+  // Sanitize legacy bug where [category, 'snacks'] was automatically saved
+  let availableMeals: MealCategory[];
+  if (rawMeals.length > 0) {
+    const validMeals = rawMeals.filter((m: any) =>
+      ['breakfast', 'lunch', 'snacks', 'dinner'].includes(m)
+    ) as MealCategory[];
+    
+    // If rawMeals only contains the category and 'snacks', and category is NOT 'snacks', strip legacy 'snacks'
+    if (validMeals.length === 2 && validMeals.includes('snacks') && validMeals.includes(cat) && cat !== 'snacks') {
+      availableMeals = [cat];
+    } else if (validMeals.length > 0) {
+      availableMeals = validMeals.includes(cat) ? validMeals : [...validMeals, cat];
+    } else {
+      availableMeals = [cat];
+    }
+  } else {
+    availableMeals = [cat];
+  }
 
   return {
     id: row.id,
@@ -97,7 +113,7 @@ export function mapFoodToDb(food: FoodItem) {
   const cat = food.category || 'lunch';
   const availableMeals = Array.isArray(food.availableMeals) && food.availableMeals.length > 0
     ? (food.availableMeals.includes(cat) ? food.availableMeals : [...food.availableMeals, cat])
-    : [cat, 'snacks'];
+    : [cat];
 
   return {
     id: food.id,

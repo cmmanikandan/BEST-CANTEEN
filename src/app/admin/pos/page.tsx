@@ -7,10 +7,10 @@ import { QRCodeSVG } from 'qrcode.react';
 import {
   Search, Plus, Minus, Trash2, Printer, CheckCircle2,
   Receipt, ShoppingCart, RefreshCw, X, ArrowRight, User, Phone,
-  Sparkles, Check, Package, Clock, DollarSign
+  Sparkles, Check, Package, Clock, DollarSign, Ban, AlertTriangle,
 } from 'lucide-react';
 import { useCanteen } from '@/context/CanteenContext';
-import { FoodItem, Order, OrderItem } from '@/types';
+import { FoodItem, Order, OrderItem, MealCategory } from '@/types';
 import { BrandLogo } from '@/components/common/BrandLogo';
 
 interface PosItem {
@@ -20,11 +20,12 @@ interface PosItem {
 }
 
 export default function AdminPosPage() {
-  const { foods, createCashPosOrder, activeMealInfo } = useCanteen();
+  const { foods, createCashPosOrder, activeMealInfo, toggleFoodAvailability } = useCanteen();
 
   // Filters & Search
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [dietFilter, setDietFilter] = useState<'ALL' | 'VEG' | 'NON_VEG'>('ALL');
+  const [availabilityFilter, setAvailabilityFilter] = useState<'ALL' | 'AVAILABLE' | 'UNAVAILABLE'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   // POS Cart State
@@ -50,9 +51,18 @@ export default function AdminPosPage() {
   // Filtered Food List
   const filteredFoods = useMemo(() => {
     return foods.filter((f) => {
-      if (selectedCategory !== 'ALL' && f.category !== selectedCategory) return false;
+      if (selectedCategory !== 'ALL') {
+        const meals = Array.isArray(f.availableMeals) && f.availableMeals.length > 0
+          ? f.availableMeals
+          : [f.category];
+        if (f.category !== selectedCategory && !meals.includes(selectedCategory as MealCategory)) {
+          return false;
+        }
+      }
       if (dietFilter === 'VEG' && !f.isVeg) return false;
       if (dietFilter === 'NON_VEG' && f.isVeg) return false;
+      if (availabilityFilter === 'AVAILABLE' && !f.isAvailable) return false;
+      if (availabilityFilter === 'UNAVAILABLE' && f.isAvailable) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesName = f.name.toLowerCase().includes(q);
@@ -62,10 +72,11 @@ export default function AdminPosPage() {
       }
       return true;
     });
-  }, [foods, selectedCategory, dietFilter, searchQuery]);
+  }, [foods, selectedCategory, dietFilter, availabilityFilter, searchQuery]);
 
   // Cart Operations
   const addToCart = (food: FoodItem) => {
+    if (!food.isAvailable) return;
     setCart((prev) => {
       const existing = prev.find((item) => item.food.id === food.id);
       if (existing) {
@@ -82,6 +93,10 @@ export default function AdminPosPage() {
       return prev
         .map((item) => {
           if (item.food.id === foodId) {
+            const currentFood = foods.find((f) => f.id === foodId);
+            if (delta > 0 && currentFood && !currentFood.isAvailable) {
+              return item;
+            }
             const newQty = item.quantity + delta;
             return newQty > 0 ? { ...item, quantity: newQty } : null;
           }
@@ -127,6 +142,16 @@ export default function AdminPosPage() {
   // Single-click Cash Order & Slip Generation
   const handleGenerateAndPrintToken = () => {
     if (cart.length === 0) return;
+
+    // Guard against billing unavailable dishes
+    const unavailableInCart = cart.filter((item) => {
+      const currentFood = foods.find((f) => f.id === item.food.id);
+      return !currentFood || !currentFood.isAvailable;
+    });
+    if (unavailableInCart.length > 0) {
+      alert(`⚠️ Cannot process bill: "${unavailableInCart.map((i) => i.food.name).join(', ')}" is currently marked UNAVAILABLE. Please remove it from the cart.`);
+      return;
+    }
 
     const orderItems: OrderItem[] = cart.map((item) => ({
       foodId: item.food.id,
@@ -227,23 +252,47 @@ export default function AdminPosPage() {
                 )}
               </div>
 
-              {/* Diet filter pills */}
-              <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-2xl shrink-0">
-                {(['ALL', 'VEG', 'NON_VEG'] as const).map((diet) => (
-                  <button
-                    key={diet}
-                    onClick={() => setDietFilter(diet)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
-                      dietFilter === diet
-                        ? 'bg-white text-[#201611] shadow-xs'
-                        : 'text-stone-500 hover:text-stone-800'
-                    }`}
-                  >
-                    {diet === 'ALL' && 'All'}
-                    {diet === 'VEG' && '🌱 Veg'}
-                    {diet === 'NON_VEG' && '🍗 Non-Veg'}
-                  </button>
-                ))}
+              {/* Diet & Stock filter pills */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-2xl shrink-0">
+                  {(['ALL', 'VEG', 'NON_VEG'] as const).map((diet) => (
+                    <button
+                      key={diet}
+                      onClick={() => setDietFilter(diet)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                        dietFilter === diet
+                          ? 'bg-white text-[#201611] shadow-xs'
+                          : 'text-stone-500 hover:text-stone-800'
+                      }`}
+                    >
+                      {diet === 'ALL' && 'All'}
+                      {diet === 'VEG' && '🌱 Veg'}
+                      {diet === 'NON_VEG' && '🍗 Non-Veg'}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-2xl shrink-0">
+                  {(['ALL', 'AVAILABLE', 'UNAVAILABLE'] as const).map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => setAvailabilityFilter(status)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                        availabilityFilter === status
+                          ? status === 'UNAVAILABLE'
+                            ? 'bg-red-500 text-white shadow-xs'
+                            : status === 'AVAILABLE'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-white text-[#201611] shadow-xs'
+                          : 'text-stone-500 hover:text-stone-800'
+                      }`}
+                    >
+                      {status === 'ALL' && 'All Status'}
+                      {status === 'AVAILABLE' && '✅ Available'}
+                      {status === 'UNAVAILABLE' && '🚫 Unavailable'}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -270,14 +319,17 @@ export default function AdminPosPage() {
             {filteredFoods.map((food) => {
               const inCartItem = cart.find((i) => i.food.id === food.id);
               const qtyInCart = inCartItem?.quantity || 0;
+              const isFoodAvailable = food.isAvailable;
 
               return (
                 <div
                   key={food.id}
-                  className={`bg-white rounded-3xl p-3 border transition-all flex flex-col justify-between group ${
-                    qtyInCart > 0
-                      ? 'border-[#FF5722] shadow-[0_4px_16px_rgba(255,87,34,0.15)] ring-1 ring-[#FF5722]'
-                      : 'border-stone-200 hover:border-stone-300 shadow-2xs hover:shadow-xs'
+                  className={`rounded-3xl p-3 border transition-all flex flex-col justify-between group ${
+                    !isFoodAvailable
+                      ? 'bg-stone-50/90 border-stone-300 shadow-2xs opacity-85'
+                      : qtyInCart > 0
+                      ? 'bg-white border-[#FF5722] shadow-[0_4px_16px_rgba(255,87,34,0.15)] ring-1 ring-[#FF5722]'
+                      : 'bg-white border-stone-200 hover:border-stone-300 shadow-2xs hover:shadow-xs'
                   }`}
                 >
                   <div>
@@ -287,11 +339,13 @@ export default function AdminPosPage() {
                         src={food.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80'}
                         alt={food.name}
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        className={`object-cover transition-transform duration-300 ${
+                          !isFoodAvailable ? 'grayscale contrast-75' : 'group-hover:scale-105'
+                        }`}
                       />
                       {/* Veg indicator dot */}
                       <span
-                        className={`absolute top-2 left-2 w-4 h-4 rounded-sm border bg-white flex items-center justify-center ${
+                        className={`absolute top-2 left-2 w-4 h-4 rounded-sm border bg-white flex items-center justify-center z-20 ${
                           food.isVeg ? 'border-green-600' : 'border-red-600'
                         }`}
                       >
@@ -302,9 +356,19 @@ export default function AdminPosPage() {
                         />
                       </span>
 
+                      {/* Unavailable Overlay Badge */}
+                      {!isFoodAvailable && (
+                        <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-[1px] flex flex-col items-center justify-center p-2 text-center z-10">
+                          <span className="bg-red-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
+                            <Ban className="w-3 h-3 stroke-[2.5]" />
+                            Unavailable
+                          </span>
+                        </div>
+                      )}
+
                       {/* Quantity in bill badge */}
-                      {qtyInCart > 0 && (
-                        <span className="absolute top-2 right-2 bg-[#FF5722] text-white font-black text-xs px-2 py-0.5 rounded-full shadow-md animate-in fade-in">
+                      {qtyInCart > 0 && isFoodAvailable && (
+                        <span className="absolute top-2 right-2 bg-[#FF5722] text-white font-black text-xs px-2 py-0.5 rounded-full shadow-md animate-in fade-in z-20">
                           {qtyInCart} in bill
                         </span>
                       )}
@@ -312,13 +376,22 @@ export default function AdminPosPage() {
 
                     {/* Food info */}
                     <div className="space-y-0.5">
-                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
-                        {food.category}
-                      </p>
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                          {food.category}
+                        </p>
+                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md ${
+                          isFoodAvailable
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {isFoodAvailable ? 'In Stock' : 'Out of Stock'}
+                        </span>
+                      </div>
                       <h3 className="font-bold text-xs sm:text-sm text-[#201611] line-clamp-1 leading-snug">
                         {food.name}
                       </h3>
-                      <p className="text-sm font-black text-[#FF5722]">
+                      <p className={`text-sm font-black ${isFoodAvailable ? 'text-[#FF5722]' : 'text-stone-400 line-through'}`}>
                         ₹{food.price}
                       </p>
                     </div>
@@ -326,7 +399,24 @@ export default function AdminPosPage() {
 
                   {/* Add / Qty Control Button */}
                   <div className="mt-3 pt-2 border-t border-stone-100">
-                    {qtyInCart === 0 ? (
+                    {!isFoodAvailable ? (
+                      <div className="space-y-1">
+                        <button
+                          disabled
+                          className="w-full py-2 bg-stone-100 border border-stone-200 text-stone-400 font-bold text-xs rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5"
+                        >
+                          <Ban className="w-3.5 h-3.5 text-red-500" />
+                          <span className="text-red-600">Unavailable</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => toggleFoodAvailability(food.id)}
+                          className="w-full text-[10px] text-stone-400 hover:text-emerald-600 font-semibold text-center hover:underline py-0.5 transition"
+                        >
+                          Set Available
+                        </button>
+                      </div>
+                    ) : qtyInCart === 0 ? (
                       <button
                         onClick={() => addToCart(food)}
                         className="w-full py-2 bg-stone-100 hover:bg-[#FF5722] hover:text-white text-stone-800 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 active:scale-95"
@@ -435,6 +525,17 @@ export default function AdminPosPage() {
                         <h4 className="font-bold text-xs text-[#201611] line-clamp-1">
                           {item.food.name}
                         </h4>
+                        {(() => {
+                          const liveFood = foods.find((f) => f.id === item.food.id);
+                          if (liveFood && !liveFood.isAvailable) {
+                            return (
+                              <span className="text-[9px] font-black bg-red-100 text-red-700 px-1.5 py-0.5 rounded-md shrink-0">
+                                Out of Stock
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                       <p className="text-[11px] text-stone-500 mt-0.5">
                         ₹{item.food.price} × {item.quantity} = ₹{item.food.price * item.quantity}
@@ -568,10 +669,27 @@ export default function AdminPosPage() {
                   />
                 </div>
 
+                {/* Warning if cart has unavailable items */}
+                {cart.some((item) => {
+                  const liveFood = foods.find((f) => f.id === item.food.id);
+                  return liveFood ? !liveFood.isAvailable : false;
+                }) && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-2.5 text-xs text-red-700 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                    <span className="font-semibold text-[11px]">
+                      Your bill contains out-of-stock items. Please remove them before proceeding.
+                    </span>
+                  </div>
+                )}
+
                 {/* Single-Click Primary Action: Generate & Print Token */}
                 <button
                   onClick={handleGenerateAndPrintToken}
-                  className="w-full py-3.5 bg-gradient-to-r from-[#FF5722] to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black text-sm rounded-2xl shadow-lg shadow-orange-500/30 transition flex items-center justify-center gap-2 active:scale-98"
+                  disabled={cart.some((item) => {
+                    const liveFood = foods.find((f) => f.id === item.food.id);
+                    return liveFood ? !liveFood.isAvailable : false;
+                  })}
+                  className="w-full py-3.5 bg-gradient-to-r from-[#FF5722] to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-sm rounded-2xl shadow-lg shadow-orange-500/30 transition flex items-center justify-center gap-2 active:scale-98"
                 >
                   <Printer className="w-4 h-4" />
                   <span>⚡ Generate & Print Cash Token (₹{total})</span>

@@ -55,7 +55,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items]);
 
   const addToCart = (food: FoodItem, quantity = 1) => {
-    if (!food || !food.id) return;
+    if (!food || !food.id || food.isAvailable === false) return;
     setItems((prev) => {
       const existing = prev.find((i) => i.food && i.food.id === food.id);
       if (existing) {

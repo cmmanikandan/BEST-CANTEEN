@@ -45,6 +45,7 @@ export default function AdminMenuPage() {
   const [tamilName, setTamilName] = useState('');
   const [price, setPrice] = useState('30');
   const [category, setCategory] = useState<MealCategory>('lunch');
+  const [availableMeals, setAvailableMeals] = useState<MealCategory[]>(['lunch']);
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [imagePreview, setImagePreview] = useState('');
@@ -61,7 +62,7 @@ export default function AdminMenuPage() {
   });
 
   const resetForm = () => {
-    setName(''); setTamilName(''); setPrice('30'); setCategory('lunch');
+    setName(''); setTamilName(''); setPrice('30'); setCategory('lunch'); setAvailableMeals(['lunch']);
     setDescription('Fresh hot canteen preparation.'); setImageUrl('');
     setImagePreview(''); setIsVeg(true); setIsPopular(false); setEditingFood(null);
   };
@@ -74,12 +75,32 @@ export default function AdminMenuPage() {
     setTamilName(food.tamilName || '');
     setPrice(food.price.toString());
     setCategory(food.category);
+    const initialMeals = Array.isArray(food.availableMeals) && food.availableMeals.length > 0
+      ? food.availableMeals
+      : [food.category];
+    setAvailableMeals(initialMeals);
     setDescription(food.description);
     setImageUrl(food.imageUrl);
     setImagePreview(food.imageUrl);
     setIsVeg(food.isVeg);
     setIsPopular(!!food.isPopular);
     setShowModal(true);
+  };
+
+  const handleCategoryChange = (newCat: MealCategory) => {
+    setCategory(newCat);
+    setAvailableMeals([newCat]);
+  };
+
+  const toggleMealSlot = (meal: MealCategory) => {
+    setAvailableMeals((prev) => {
+      if (prev.includes(meal)) {
+        if (prev.length === 1) return prev; // Keep at least one meal category
+        return prev.filter((m) => m !== meal);
+      } else {
+        return [...prev, meal];
+      }
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,10 +117,38 @@ export default function AdminMenuPage() {
     const finalUrl = imageUrl ||
       'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80';
 
+    const finalAvailableMeals = availableMeals.length > 0
+      ? (availableMeals.includes(category) ? availableMeals : [category, ...availableMeals])
+      : [category];
+
     if (editingFood) {
-      updateFoodItem(editingFood.id, { name, tamilName, price: priceNum, category, availableMeals: [category, 'snacks'], description, imageUrl: finalUrl, isVeg, isPopular });
+      updateFoodItem(editingFood.id, {
+        name,
+        tamilName,
+        price: priceNum,
+        category,
+        availableMeals: finalAvailableMeals,
+        description,
+        imageUrl: finalUrl,
+        isVeg,
+        isPopular
+      });
     } else {
-      addFoodItem({ name, tamilName, price: priceNum, rating: 4.8, ratingCount: 1, category, availableMeals: [category, 'snacks'], description, imageUrl: finalUrl, isAvailable: true, isVisible: true, isVeg, isPopular });
+      addFoodItem({
+        name,
+        tamilName,
+        price: priceNum,
+        rating: 4.8,
+        ratingCount: 1,
+        category,
+        availableMeals: finalAvailableMeals,
+        description,
+        imageUrl: finalUrl,
+        isAvailable: true,
+        isVisible: true,
+        isVeg,
+        isPopular
+      });
     }
     setShowModal(false);
   };
@@ -402,13 +451,54 @@ export default function AdminMenuPage() {
                     <input required type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="w-full px-3 py-2 border border-stone-200 rounded-xl" />
                   </div>
                   <div>
-                    <label className="font-bold text-stone-600 block mb-1">Meal Category</label>
-                    <select value={category} onChange={(e) => setCategory(e.target.value as MealCategory)} className="w-full px-3 py-2 border border-stone-200 rounded-xl">
+                    <label className="font-bold text-stone-600 block mb-1">Primary Category</label>
+                    <select
+                      value={category}
+                      onChange={(e) => handleCategoryChange(e.target.value as MealCategory)}
+                      className="w-full px-3 py-2 border border-stone-200 rounded-xl"
+                    >
                       <option value="breakfast">Breakfast</option>
                       <option value="lunch">Lunch</option>
                       <option value="snacks">Snacks (All Day)</option>
                       <option value="dinner">Dinner</option>
                     </select>
+                  </div>
+                </div>
+
+                {/* Meal Times Slot Selection */}
+                <div className="bg-stone-50 border border-stone-200/80 rounded-2xl p-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-stone-700 block text-[11px]">
+                      Serve During Meal Times:
+                    </label>
+                    <span className="text-[10px] text-stone-400">
+                      Shows only in selected meal times
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    {([
+                      { id: 'breakfast', label: '🌅 Breakfast' },
+                      { id: 'lunch', label: '☀️ Lunch' },
+                      { id: 'snacks', label: '🍪 Snacks' },
+                      { id: 'dinner', label: '🌙 Dinner' },
+                    ] as const).map((slot) => {
+                      const isChecked = availableMeals.includes(slot.id);
+                      return (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          onClick={() => toggleMealSlot(slot.id)}
+                          className={`py-1.5 px-2 rounded-xl text-[11px] font-bold border transition text-center flex items-center justify-center gap-1 ${
+                            isChecked
+                              ? 'bg-orange-50 text-[#FF5722] border-orange-300'
+                              : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-100'
+                          }`}
+                        >
+                          <span>{slot.label}</span>
+                          {isChecked && <span className="text-[10px]">✓</span>}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
