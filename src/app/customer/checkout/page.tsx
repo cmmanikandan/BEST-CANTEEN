@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCanteen } from '@/context/CanteenContext';
-import { ArrowLeft, ShieldCheck, CheckCircle2, QrCode, ShoppingBag, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, CheckCircle2, QrCode, ShoppingBag, ArrowRight, XCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { QrTokenModal } from '@/components/customer/QrTokenModal';
 import { Order } from '@/types';
@@ -19,48 +19,170 @@ export default function CustomerCheckoutPage() {
   const { createOrder, verifyPayment } = useCanteen();
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
 
-  // Protect checkout page — user must be logged in
-  React.useEffect(() => {
-    if (isLoaded && !user) {
-      router.push('/login?redirect=/customer/checkout');
-    }
-  }, [isLoaded, user, router]);
+  const loadRazorpayScript = () => {
+    return new Promise<boolean>((resolve) => {
+      if (typeof window !== 'undefined' && (window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
 
-  if (!isLoaded) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#FF5722] border-t-transparent animate-spin" />
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
-  // If cart is empty and no order was completed in this session, return to cart
-  if (items.length === 0 && !completedOrder) {
-    router.push('/customer/cart');
-    return null;
-  }
-
-  const handleProceedToPayment = () => {
+  // 1. Live Official Razorpay Gateway
+  const handleProceedToPayment = async () => {
+    if (items.length === 0) return;
     setIsProcessing(true);
-    // Simulate Razorpay payment authorization and cryptographic token generation
+    setPaymentError(null);
+
+    try {
+      // Create Razorpay Order on server
+      const res = await fetch('/api/razorpay/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: Number(total),
+          receipt: `rcpt_${Date.now()}`,
+          notes: {
+            userId: user?.id,
+            userName: user?.name,
+          },
+        }),
+      });
+
+      const orderData = await res.json();
+      if (!res.ok || !orderData.orderId) {
+        throw new Error(orderData.error || 'Could not initiate Razorpay order');
+      }
+
+      await loadRazorpayScript();
+
+      const options = {
+        key: orderData.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_T547lttHOVL633',
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
+        name: 'Best Canteen',
+        description: `Token Payment (₹${total})`,
+        image: '/logo new.png',
+        order_id: orderData.orderId,
+        modal: {
+          ondismiss: function () {
+            // User closed Razorpay popup without paying
+            setIsProcessing(false);
+            setPaymentError('Payment was cancelled. No digital token was created.');
+          },
+        },
+        handler: async function (response: any) {
+          setIsProcessing(true);
+          try {
+            // Verify payment signature
+            const verifyRes = await fetch('/api/razorpay/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              }),
+            });
+            const verifyData = await verifyRes.json();
+
+            if (verifyData.verified) {
+              // Create verified order ONLY after successful payment
+              const orderItems = toOrderItems();
+              const newOrder = createOrder(
+                orderItems,
+                undefined,
+                {
+                  id: user?.id,
+                  name: user?.name,
+                  email: 'email' in (user || {}) ? (user as any).email : undefined,
+                  avatarUrl: 'avatarUrl' in (user || {}) ? (user as any).avatarUrl : undefined,
+                },
+                {
+                  paymentId: response.razorpay_payment_id,
+                  razorpayOrderId: response.razorpay_order_id,
+                }
+              );
+
+              clearCart();
+              setCompletedOrder(newOrder);
+              setShowQrModal(true);
+              setIsProcessing(false);
+
+              try {
+                confetti({
+                  particleCount: 90,
+                  spread: 75,
+                  origin: { y: 0.55 },
+                });
+              } catch {}
+            } else {
+              setIsProcessing(false);
+              setPaymentError('Payment verification failed. No token was created.');
+            }
+          } catch {
+            setIsProcessing(false);
+            setPaymentError('Payment signature error. Please contact canteen counter.');
+          }
+        },
+        prefill: {
+          name: user?.name || 'Customer',
+          email: 'email' in (user || {}) ? (user as any).email : 'customer@college.edu',
+          contact: '',
+        },
+        theme: {
+          color: '#FF5722',
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (resp: any) {
+        console.error('Payment failed:', resp.error);
+        setIsProcessing(false);
+        setPaymentError(resp.error?.description || 'Payment was declined. No token was created.');
+      });
+      rzp.open();
+    } catch (err: any) {
+      console.warn('Razorpay live gateway notice:', err);
+      setIsProcessing(false);
+      setPaymentError(
+        err?.message || 'Unable to reach Razorpay gateway. Please try again or use Instant Test Pay.'
+      );
+    }
+  };
+
+  // 2. Instant Test Simulation (Creates order ONLY upon success)
+  const handleInstantTestPayment = () => {
+    setIsProcessing(true);
+    setPaymentError(null);
     setTimeout(() => {
       const orderItems = toOrderItems();
-      const newOrder = createOrder(orderItems, undefined, {
-        id: user?.id,
-        name: user?.name,
-        email: 'email' in (user || {}) ? (user as any).email : undefined,
-        avatarUrl: 'avatarUrl' in (user || {}) ? (user as any).avatarUrl : undefined,
-      });
-      const mockPaymentId = `pay_RPZ${Date.now()}`;
-      const verified = verifyPayment(newOrder.id, mockPaymentId);
+      const newOrder = createOrder(
+        orderItems,
+        undefined,
+        {
+          id: user?.id,
+          name: user?.name,
+          email: 'email' in (user || {}) ? (user as any).email : undefined,
+          avatarUrl: 'avatarUrl' in (user || {}) ? (user as any).avatarUrl : undefined,
+        },
+        {
+          paymentId: `pay_TEST_${Date.now()}`,
+          razorpayOrderId: `order_TEST_${Date.now().toString().slice(-6)}`,
+        }
+      );
 
       clearCart();
-      setCompletedOrder(verified || newOrder);
+      setCompletedOrder(newOrder);
       setShowQrModal(true);
       setIsProcessing(false);
 
@@ -71,7 +193,7 @@ export default function CustomerCheckoutPage() {
           origin: { y: 0.55 },
         });
       } catch {}
-    }, 650);
+    }, 600);
   };
 
   // ── PAYMENT SUCCESS VIEW ──
@@ -290,6 +412,22 @@ export default function CustomerCheckoutPage() {
         </div>
       </div>
 
+      {paymentError && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-2xl flex items-center justify-between gap-2 animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <XCircle className="w-4 h-4 text-red-500 shrink-0" />
+            <span>{paymentError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPaymentError(null)}
+            className="text-red-400 hover:text-red-700 text-sm font-bold"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Pay Button CTA */}
       <button
         onClick={handleProceedToPayment}
@@ -299,7 +437,7 @@ export default function CustomerCheckoutPage() {
         {isProcessing ? (
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-            <span>Processing Payment & Generating Token...</span>
+            <span>Connecting to Razorpay...</span>
           </div>
         ) : (
           <>
@@ -308,6 +446,18 @@ export default function CustomerCheckoutPage() {
           </>
         )}
       </button>
+
+      {/* Test / Sandbox verification option */}
+      <div className="text-center">
+        <button
+          type="button"
+          onClick={handleInstantTestPayment}
+          disabled={isProcessing}
+          className="text-xs text-[#8C7E76] hover:text-[#FF5722] font-semibold underline underline-offset-4 transition"
+        >
+          ⚡ Instant Test Payment (Verify Simulation)
+        </button>
+      </div>
 
       <p className="text-center text-[11px] text-stone-400">
         🔒 Official Canteen Merchant Gateway · 100% Secure & Verified

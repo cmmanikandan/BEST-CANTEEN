@@ -65,6 +65,8 @@ function CustomerPaymentContent() {
       total: Number(amount),
       qrToken: `BC-SECURE-${orderId}-${Date.now()}`,
       items: [],
+      orderStatus: 'READY',
+      paymentStatus: 'VERIFIED',
     };
 
     setCompletedOrder(targetOrder);
@@ -138,8 +140,11 @@ function CustomerPaymentContent() {
           email: 'customer@college.edu',
           contact: '+919876543210',
         },
-        theme: {
-          color: '#FF5722',
+        modal: {
+          ondismiss: function () {
+            setIsProcessing(false);
+            setPaymentStatus('FAILED');
+          },
         },
       };
 
@@ -151,8 +156,9 @@ function CustomerPaymentContent() {
       });
       rzp.open();
     } catch (err) {
-      console.warn('Live Razorpay notice (falling back to fast verify):', err);
-      handlePaySuccess();
+      console.warn('Live Razorpay error:', err);
+      setIsProcessing(false);
+      setPaymentStatus('FAILED');
     }
   };
 

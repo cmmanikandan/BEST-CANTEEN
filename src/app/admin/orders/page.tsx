@@ -10,7 +10,6 @@ const STATUS_STYLE: Record<string, string> = {
   ACTIVE: 'bg-emerald-100 text-emerald-800',
   READY: 'bg-emerald-100 text-emerald-800',
   PAID: 'bg-blue-100 text-blue-800',
-  PAYMENT_PENDING: 'bg-orange-100 text-orange-800',
 };
 
 export default function AdminOrdersPage() {
@@ -18,7 +17,12 @@ export default function AdminOrdersPage() {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [search, setSearch] = useState('');
 
-  const filtered = orders.filter((o) => {
+  // Strictly filter out any unverified or payment pending orders
+  const validOrders = orders.filter(
+    (o) => o.orderStatus !== 'PAYMENT_PENDING' && o.paymentStatus === 'VERIFIED'
+  );
+
+  const filtered = validOrders.filter((o) => {
     if (filterStatus === 'ACTIVE') {
       if (o.orderStatus !== 'READY' && o.orderStatus !== 'PAID') return false;
     } else if (filterStatus !== 'ALL' && o.orderStatus !== filterStatus) {
@@ -60,7 +64,7 @@ export default function AdminOrdersPage() {
             <span>+ Open Cash POS</span>
           </Link>
           <span className="bg-white border border-stone-200 px-3.5 py-2 rounded-2xl text-xs font-bold text-stone-600 shadow-2xs">
-            {orders.length} Tokens
+            {validOrders.length} Tokens
           </span>
         </div>
       </div>
@@ -78,7 +82,7 @@ export default function AdminOrdersPage() {
           />
         </div>
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          {['ALL', 'ACTIVE', 'PAID', 'SERVED', 'PAYMENT_PENDING'].map((status) => (
+          {['ALL', 'ACTIVE', 'PAID', 'SERVED'].map((status) => (
             <button
               key={status}
               onClick={() => setFilterStatus(status)}

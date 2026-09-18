@@ -42,6 +42,8 @@ export default function CustomerOrdersPage() {
 
   const myOrders = orders.filter((o) => {
     if (!user) return false;
+    // Strictly exclude any unverified or payment pending orders
+    if (o.orderStatus === 'PAYMENT_PENDING' || o.paymentStatus !== 'VERIFIED') return false;
     const userEmail = 'email' in user ? user.email : '';
     return (
       o.userId === user.id ||
@@ -51,7 +53,7 @@ export default function CustomerOrdersPage() {
     );
   });
 
-  const activeOrders = myOrders.filter((o) => o.orderStatus !== 'SERVED' && o.orderStatus !== 'CANCELLED');
+  const activeOrders = myOrders.filter((o) => o.orderStatus === 'READY' || o.orderStatus === 'PAID');
   const historyOrders = myOrders.filter((o) => o.orderStatus === 'SERVED' || o.orderStatus === 'CANCELLED');
 
   const displayOrders = tab === 'active' ? activeOrders : historyOrders;

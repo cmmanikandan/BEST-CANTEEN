@@ -52,7 +52,8 @@ interface CanteenContextType {
   createOrder: (
     items: OrderItem[],
     notes?: string,
-    customerDetails?: { id?: string; name?: string; phone?: string; email?: string; avatarUrl?: string }
+    customerDetails?: { id?: string; name?: string; phone?: string; email?: string; avatarUrl?: string },
+    paymentInfo?: { paymentId?: string; razorpayOrderId?: string }
   ) => Order;
   createCashPosOrder: (
     items: OrderItem[],
@@ -135,10 +136,10 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
 
       const savedOrders = localStorage.getItem('bc_orders');
       if (savedOrders) {
-        // Purge any old mock generated tokens
+        // Purge any old mock generated tokens and unpaid/pending orders
         const parsedOrders: Order[] = JSON.parse(savedOrders);
         const cleanOrders = parsedOrders.filter(
-          (o) => o.id !== 'BC10482' && o.id !== 'BC10420'
+          (o) => o.id !== 'BC10482' && o.id !== 'BC10420' && o.orderStatus !== 'PAYMENT_PENDING' && o.paymentStatus === 'VERIFIED'
         );
         setOrders(cleanOrders);
         localStorage.setItem('bc_orders', JSON.stringify(cleanOrders));
@@ -229,20 +230,32 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
           if (isMounted) setMealSchedules(schedData.map(mapScheduleFromDb));
         }
 
-        // Fetch Orders
+        // Purge any orphan / unverified / payment pending orders from remote DB
+        try {
+          await supabase
+            .from('orders')
+            .delete()
+            .or('order_status.eq.PAYMENT_PENDING,payment_status.eq.PENDING');
+        } catch {}
+
+        // Fetch Orders (strictly verified tokens)
         const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
           .select('*')
           .order('created_at', { ascending: false });
 
         if (!ordersError && ordersData && ordersData.length > 0) {
-          const remoteOrders = ordersData.map(mapOrderFromDb);
+          const remoteOrders = ordersData
+            .map(mapOrderFromDb)
+            .filter((o) => o.orderStatus !== 'PAYMENT_PENDING' && o.paymentStatus === 'VERIFIED');
           if (isMounted) {
             setOrders((local) => {
               const map = new Map<string, Order>();
               remoteOrders.forEach((o) => map.set(o.id, o));
               local.forEach((o) => {
-                if (!map.has(o.id)) map.set(o.id, o);
+                if (!map.has(o.id) && o.orderStatus !== 'PAYMENT_PENDING' && o.paymentStatus === 'VERIFIED') {
+                  map.set(o.id, o);
+                }
               });
               return Array.from(map.values()).sort(
                 (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -273,15 +286,25 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             const newOrder = mapOrderFromDb(payload.new);
+            // Strictly ignore any unpaid or payment pending inserts
+            if (newOrder.orderStatus === 'PAYMENT_PENDING' || newOrder.paymentStatus !== 'VERIFIED') return;
             setOrders((prev) => {
               if (prev.some((o) => o.id === newOrder.id)) return prev;
               return [newOrder, ...prev];
             });
           } else if (payload.eventType === 'UPDATE') {
             const updated = mapOrderFromDb(payload.new);
-            setOrders((prev) =>
-              prev.map((o) => (o.id === updated.id ? { ...o, ...updated } : o))
-            );
+            setOrders((prev) => {
+              // If order was cancelled or pending, remove from active list
+              if (updated.orderStatus === 'PAYMENT_PENDING' || updated.paymentStatus !== 'VERIFIED') {
+                return prev.filter((o) => o.id !== updated.id);
+              }
+              const exists = prev.some((o) => o.id === updated.id);
+              if (exists) {
+                return prev.map((o) => (o.id === updated.id ? { ...o, ...updated } : o));
+              }
+              return [updated, ...prev];
+            });
           } else if (payload.eventType === 'DELETE') {
             const deletedId = (payload.old as any)?.id;
             if (deletedId) {
@@ -340,7 +363,10 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem('bc_orders', JSON.stringify(orders));
+      const cleanOrders = orders.filter(
+        (o) => o.orderStatus !== 'PAYMENT_PENDING' && o.paymentStatus === 'VERIFIED'
+      );
+      localStorage.setItem('bc_orders', JSON.stringify(cleanOrders));
     } catch {}
   }, [orders]);
 
@@ -494,7 +520,8 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
   const createOrder = (
     items: OrderItem[],
     notes?: string,
-    customerDetails?: { id?: string; name?: string; phone?: string; email?: string; avatarUrl?: string }
+    customerDetails?: { id?: string; name?: string; phone?: string; email?: string; avatarUrl?: string },
+    paymentInfo?: { paymentId?: string; razorpayOrderId?: string }
   ): Order => {
     const id = generateOrderId();
     const subtotal = items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
@@ -522,6 +549,10 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
       } catch {}
     }
 
+    const paymentId = paymentInfo?.paymentId || `pay_RPZ${Date.now()}`;
+    const razorpayOrderId = paymentInfo?.razorpayOrderId || `order_RPZ${Date.now().toString().slice(-6)}`;
+
+    // An order is strictly created as a verified paid food token
     const newOrder: Order = {
       id,
       userId: activeUserId || 'customer-online',
@@ -533,21 +564,34 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
       subtotal,
       tax,
       total,
-      orderStatus: 'PAYMENT_PENDING',
-      paymentStatus: 'PENDING',
+      orderStatus: 'READY',
+      paymentStatus: 'VERIFIED',
+      paymentId,
+      razorpayOrderId,
       qrToken,
       createdAt: new Date().toISOString(),
       notes,
     };
 
-    setOrders((prev) => [newOrder, ...prev]);
+    setOrders((prev) => [
+      newOrder,
+      ...prev.filter((o) => o.orderStatus !== 'PAYMENT_PENDING' && o.paymentStatus === 'VERIFIED'),
+    ]);
 
     safeDbSync(() => supabase.from('orders').insert(mapOrderToDb(newOrder)));
     logCanteenEvent('order_created', {
       order_id: id,
       total,
       item_count: items.length,
+      payment_id: paymentId,
     });
+
+    addNotification(
+      `Payment Verified: #${id}`,
+      `Payment confirmed. Your Digital QR token #${id} is active for pickup at Counter 1.`,
+      'payment',
+      id
+    );
 
     return newOrder;
   };

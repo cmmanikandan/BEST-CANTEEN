@@ -23,15 +23,18 @@ export default function DigitalQrPage() {
 
   const order = orders.find((o) => o.id === id);
 
-  if (!order) {
+  if (!order || order.paymentStatus !== 'VERIFIED' || order.orderStatus === 'PAYMENT_PENDING') {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center space-y-4">
-        <h2 className="text-xl font-bold text-[#201611]">Order Not Found</h2>
+        <h2 className="text-xl font-bold text-[#201611]">Token Not Found or Unpaid</h2>
+        <p className="text-xs text-[#5C4E46]">
+          No active digital token is issued for unpaid orders. Please complete payment first.
+        </p>
         <Link
           href="/customer/orders"
           className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#FF5722] text-white text-xs font-bold rounded-xl"
         >
-          View All Orders
+          View My Tokens
         </Link>
       </div>
     );
