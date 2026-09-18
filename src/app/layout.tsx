@@ -22,7 +22,6 @@ export const viewport: Viewport = {
   themeColor: '#FF5722',
 };
 
-import { AppInitializer } from '@/components/splash/AppInitializer';
 import { PwaInstallPrompt } from '@/components/common/PwaInstallPrompt';
 
 export default function RootLayout({
@@ -36,7 +35,6 @@ export default function RootLayout({
         <AuthProvider>
           <CanteenProvider>
             <CartProvider>
-              <AppInitializer />
               <PwaInstallPrompt />
               <main className="min-h-screen flex flex-col">
                 {children}

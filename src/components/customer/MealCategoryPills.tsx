@@ -15,6 +15,11 @@ export function MealCategoryPills({
   onSelectCategory,
 }: MealCategoryPillsProps) {
   const { mealSchedules, effectiveTime } = useCanteen();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const currentMins = effectiveTime.getHours() * 60 + effectiveTime.getMinutes();
 
@@ -27,7 +32,7 @@ export function MealCategoryPills({
   ];
 
   const getMealStatusBadge = (catId: MealCategory) => {
-    if (catId === 'all') return null;
+    if (!mounted || catId === 'all') return null;
     const schedule = mealSchedules.find((m) => m.id === catId);
     if (!schedule) return null;
 

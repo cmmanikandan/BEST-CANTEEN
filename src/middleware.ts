@@ -11,19 +11,6 @@ export function middleware(request: NextRequest) {
   // Get role from cookie (set by AuthContext on login)
   const role = request.cookies.get('bc_user_role')?.value;
 
-  // ── Instant root redirect for logged-in users (eliminates landing page flash) ──
-  if (pathname === '/') {
-    if (role === 'admin') {
-      return NextResponse.redirect(new URL('/admin/dashboard', request.url));
-    }
-    if (role === 'server') {
-      return NextResponse.redirect(new URL('/server/dashboard', request.url));
-    }
-    if (role === 'customer') {
-      return NextResponse.redirect(new URL('/customer/home', request.url));
-    }
-  }
-
   // ── Admin protection ──
   if (pathname.startsWith('/admin')) {
     if (role !== 'admin') {
@@ -48,5 +35,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/admin/:path*', '/server/:path*'],
+  matcher: ['/admin/:path*', '/server/:path*'],
 };

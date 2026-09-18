@@ -108,7 +108,7 @@ export default function CustomerHomePage() {
                 </span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-[#201611] tracking-tight flex items-center gap-2 mt-1">
-                <span>{greeting}, {firstName}</span>
+                <span suppressHydrationWarning>{greeting}, {firstName}</span>
                 <span className="text-2xl">👋</span>
               </h1>
               <p className="text-xs sm:text-sm text-[#5C4E46] mt-0.5">

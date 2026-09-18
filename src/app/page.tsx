@@ -21,41 +21,56 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BrandLogo } from '@/components/common/BrandLogo';
+import { MobileSplash } from '@/components/splash/MobileSplash';
+import { WebSplash } from '@/components/splash/WebSplash';
 
 export default function LandingPage() {
   const router = useRouter();
   const { user, role, isLoaded } = useAuth();
   const { foods, activeMealInfo } = useCanteen();
 
-  // Immediate synchronous redirect if localStorage session exists
+  const [splashFinished, setSplashFinished] = React.useState(false);
+
   React.useEffect(() => {
+    // Check if user session exists in storage or auth
+    let savedRole: string | null = null;
+    let savedUser: string | null = null;
     try {
-      const savedRole = localStorage.getItem('bc_user_role');
-      const savedUser = localStorage.getItem('bc_custom_user');
-      if (savedRole && savedUser) {
-        if (savedRole === 'admin') router.replace('/admin/dashboard');
-        else if (savedRole === 'server') router.replace('/server/dashboard');
-        else router.replace('/customer/home');
-        return;
-      }
+      savedRole = localStorage.getItem('bc_user_role');
+      savedUser = localStorage.getItem('bc_custom_user');
     } catch {}
 
-    if (isLoaded && user) {
-      if (role === 'admin' || user.role === 'admin') {
-        router.replace('/admin/dashboard');
-      } else if (role === 'server' || user.role === 'server') {
-        router.replace('/server/dashboard');
-      } else {
-        router.replace('/customer/home');
-      }
+    const isUserLoggedIn = !!(savedRole && savedUser) || (isLoaded && !!user);
+
+    if (isUserLoggedIn) {
+      const activeRole = savedRole || role || user?.role || 'customer';
+      // Logged in: Splash screen -> Direct to Dashboard (Landing page is NEVER shown)
+      const timer = setTimeout(() => {
+        if (activeRole === 'admin') {
+          router.replace('/admin/dashboard');
+        } else if (activeRole === 'server') {
+          router.replace('/server/dashboard');
+        } else {
+          router.replace('/customer/home');
+        }
+      }, 950);
+      return () => clearTimeout(timer);
+    } else if (isLoaded && !user) {
+      // Guest: Splash screen -> Landing page
+      const timer = setTimeout(() => {
+        setSplashFinished(true);
+      }, 1200);
+      return () => clearTimeout(timer);
     }
   }, [isLoaded, user, role, router]);
 
-  // NEVER render the landing page until auth has fully resolved AND confirmed user is a guest
-  if (!isLoaded || user) {
+  // WHILE SPLASH IS ACTIVE OR USER IS LOGGED IN:
+  // Render ONLY the Splash Screen. The landing page HTML is never rendered underneath.
+  if (!splashFinished || user) {
     return (
-      <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-[#FF5722] border-t-transparent animate-spin" />
+      <div className="fixed inset-0 z-50 overflow-hidden bg-[#FDFBF7]">
+        <MobileSplash isVisible={true} />
+        <WebSplash isVisible={true} />
       </div>
     );
   }
