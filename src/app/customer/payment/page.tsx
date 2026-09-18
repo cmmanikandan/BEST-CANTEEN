@@ -5,10 +5,13 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCanteen } from '@/context/CanteenContext';
 import { useAuth } from '@/context/AuthContext';
-import { ShieldCheck, CheckCircle2, XCircle, Smartphone, CreditCard, Building, ArrowLeft, QrCode, ShoppingBag } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, XCircle, Smartphone, CreditCard, Building, ArrowLeft, QrCode, ShoppingBag, Zap } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { QrTokenModal } from '@/components/customer/QrTokenModal';
 import confetti from 'canvas-confetti';
+
+// ── Easy Toggle: Set to false anytime after Razorpay merchant approval ──
+const ENABLE_DEMO_PAY = true;
 
 function CustomerPaymentContent() {
   const router = useRouter();
@@ -485,41 +488,58 @@ function CustomerPaymentContent() {
             )}
 
             {/* Payment Trigger Buttons */}
-            <div className="pt-3 space-y-2">
-              <button
-                onClick={handleRazorpayLive}
-                disabled={isProcessing}
-                className="w-full py-3.5 bg-[#FF5722] hover:bg-[#F4511E] text-white font-black text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition active:scale-[0.99] disabled:opacity-75"
-              >
-                {isProcessing ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <ShieldCheck className="w-4 h-4 text-white" />
-                    <span>Pay ₹{amount} (Open Razorpay Gateway)</span>
-                  </>
-                )}
-              </button>
+            <div className="pt-3 space-y-2.5">
+              {ENABLE_DEMO_PAY ? (
+                <>
+                  <button
+                    onClick={handlePaySuccess}
+                    disabled={isProcessing}
+                    className="w-full py-4 bg-[#FF5722] hover:bg-[#F4511E] text-white font-black text-sm sm:text-base rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 transition active:scale-[0.99] disabled:opacity-75"
+                  >
+                    {isProcessing ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Generating Token...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Zap className="w-5 h-5 fill-white" />
+                        <span>⚡ Demo Pay ₹{amount} (Instant Token)</span>
+                      </>
+                    )}
+                  </button>
 
-              <div className="grid grid-cols-2 gap-2 pt-1">
+                  <p className="text-center text-xs text-stone-500 font-medium">
+                    ⚡ Demo Mode active while Razorpay business approval is in progress.
+                  </p>
+
+                  <div className="text-center pt-1">
+                    <button
+                      type="button"
+                      onClick={handleRazorpayLive}
+                      disabled={isProcessing}
+                      className="text-xs text-stone-400 hover:text-stone-600 font-semibold underline transition"
+                    >
+                      Or Open Live Razorpay (Pending Approval)
+                    </button>
+                  </div>
+                </>
+              ) : (
                 <button
-                  type="button"
-                  onClick={handlePaySuccess}
+                  onClick={handleRazorpayLive}
                   disabled={isProcessing}
-                  className="w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-[11px] rounded-xl transition flex items-center justify-center gap-1"
+                  className="w-full py-3.5 bg-[#FF5722] hover:bg-[#F4511E] text-white font-black text-xs sm:text-sm rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 transition active:scale-[0.99] disabled:opacity-75"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Instant Test Verify</span>
+                  {isProcessing ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4 text-white" />
+                      <span>Pay ₹{amount} (Open Razorpay Gateway)</span>
+                    </>
+                  )}
                 </button>
-                <button
-                  type="button"
-                  onClick={handlePayFail}
-                  disabled={isProcessing}
-                  className="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 font-semibold text-[11px] rounded-xl transition"
-                >
-                  Simulate Decline
-                </button>
-              </div>
+              )}
             </div>
 
 

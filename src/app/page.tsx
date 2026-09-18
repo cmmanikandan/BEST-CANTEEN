@@ -62,19 +62,36 @@ export default function LandingPage() {
   }, [isLoaded, user, role, router]);
 
   // WHILE CHECKING AUTH (or redirecting to dashboard if logged in):
-  // Render clean "... loading" indicator. The landing page HTML is never rendered when logged in.
+  // Render high-priority splash screen image on mobile and clean branding on desktop
   if (checkingAuth) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#FDFBF7]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="flex items-center gap-2">
+      <div className="fixed inset-0 z-50 overflow-hidden bg-[#FDFBF7]">
+        {/* Mobile: Full-screen high-priority splash artwork */}
+        <div className="md:hidden fixed inset-0">
+          <Image
+            src="/splash-bg.png"
+            alt="Best Canteen Splash Screen"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover select-none pointer-events-none"
+            quality={95}
+          />
+        </div>
+
+        {/* Desktop / Tablet: Centered Brand Logo */}
+        <div className="hidden md:flex fixed inset-0 flex-col items-center justify-center gap-4 bg-[#FFF9F1]">
+          <BrandLogo size="lg" />
+        </div>
+
+        {/* Bottom correct alignment: .... for loading (clean bouncing dots, no 'Loading...' text) */}
+        <div className="absolute bottom-12 inset-x-0 z-20 flex items-center justify-center pointer-events-none">
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/90 backdrop-blur-md border border-stone-200/80 shadow-lg">
             <span className="w-2.5 h-2.5 rounded-full bg-[#FF5722] animate-bounce [animation-delay:-0.3s]" />
-            <span className="w-2.5 h-2.5 rounded-full bg-[#FF5722] animate-bounce [animation-delay:-0.15s]" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#FF5722] animate-bounce [animation-delay:-0.2s]" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#FF5722] animate-bounce [animation-delay:-0.1s]" />
             <span className="w-2.5 h-2.5 rounded-full bg-[#FF5722] animate-bounce" />
           </div>
-          <span className="text-xs font-bold text-[#8C7E76] uppercase tracking-widest">
-            Loading...
-          </span>
         </div>
       </div>
     );

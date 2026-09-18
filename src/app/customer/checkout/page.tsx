@@ -6,11 +6,14 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCanteen } from '@/context/CanteenContext';
-import { ArrowLeft, ShieldCheck, CheckCircle2, QrCode, ShoppingBag, ArrowRight, XCircle } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, CheckCircle2, QrCode, ShoppingBag, ArrowRight, XCircle, Zap } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { QrTokenModal } from '@/components/customer/QrTokenModal';
 import { Order } from '@/types';
 import confetti from 'canvas-confetti';
+
+// ── Easy Toggle: Set to false anytime after Razorpay merchant approval ──
+const ENABLE_DEMO_PAY = true;
 
 export default function CustomerCheckoutPage() {
   const router = useRouter();
@@ -428,39 +431,64 @@ export default function CustomerCheckoutPage() {
         </div>
       )}
 
-      {/* Pay Button CTA */}
-      <button
-        onClick={handleProceedToPayment}
-        disabled={isProcessing}
-        className="w-full py-4 bg-[#FF5722] hover:bg-[#F4511E] text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(255,87,34,0.3)] transition active:scale-[0.99] disabled:opacity-75 text-base"
-      >
-        {isProcessing ? (
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-            <span>Connecting to Razorpay...</span>
-          </div>
-        ) : (
-          <>
-            <ShieldCheck className="w-5 h-5" />
-            <span>Pay ₹{total} via Razorpay</span>
-          </>
-        )}
-      </button>
+      {/* Pay Action CTA */}
+      {ENABLE_DEMO_PAY ? (
+        <div className="space-y-3">
+          <button
+            onClick={handleInstantTestPayment}
+            disabled={isProcessing}
+            className="w-full py-4 bg-[#FF5722] hover:bg-[#F4511E] text-white font-black rounded-2xl flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(255,87,34,0.3)] transition active:scale-[0.99] disabled:opacity-75 text-base"
+          >
+            {isProcessing ? (
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                <span>Generating Token...</span>
+              </div>
+            ) : (
+              <>
+                <Zap className="w-5 h-5 fill-white" />
+                <span>⚡ Demo Pay ₹{total} (Instant Token)</span>
+              </>
+            )}
+          </button>
 
-      {/* Test / Sandbox verification option */}
-      <div className="text-center">
+          <p className="text-center text-xs text-stone-500 font-medium">
+            ⚡ Demo Payment Active (Razorpay under approval) · Click to instantly generate your digital QR token!
+          </p>
+
+          <div className="text-center pt-1">
+            <button
+              type="button"
+              onClick={handleProceedToPayment}
+              disabled={isProcessing}
+              className="text-xs text-stone-400 hover:text-stone-600 font-semibold underline transition"
+            >
+              Or Open Live Razorpay (Pending Approval)
+            </button>
+          </div>
+        </div>
+      ) : (
         <button
-          type="button"
-          onClick={handleInstantTestPayment}
+          onClick={handleProceedToPayment}
           disabled={isProcessing}
-          className="text-xs text-[#8C7E76] hover:text-[#FF5722] font-semibold underline underline-offset-4 transition"
+          className="w-full py-4 bg-[#FF5722] hover:bg-[#F4511E] text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(255,87,34,0.3)] transition active:scale-[0.99] disabled:opacity-75 text-base"
         >
-          ⚡ Instant Test Payment (Verify Simulation)
+          {isProcessing ? (
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              <span>Connecting to Razorpay...</span>
+            </div>
+          ) : (
+            <>
+              <ShieldCheck className="w-5 h-5" />
+              <span>Pay ₹{total} via Razorpay</span>
+            </>
+          )}
         </button>
-      </div>
+      )}
 
       <p className="text-center text-[11px] text-stone-400">
-        🔒 Official Canteen Merchant Gateway · 100% Secure & Verified
+        🔒 Official Best Canteen Token System · Instant Digital Pick-up Token
       </p>
     </div>
   );

@@ -68,6 +68,7 @@ interface CanteenContextType {
   };
   addNotification: (title: string, message: string, type: 'order' | 'payment' | 'menu' | 'alert', orderId?: string) => void;
   markNotificationAsRead: (id: string) => void;
+  markAllNotificationsAsRead: () => void;
   deleteNotification: (id: string) => void;
   requestDeviceNotificationPermission: () => Promise<boolean>;
 }
@@ -345,6 +346,12 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('bc_favorites', JSON.stringify(favorites));
     } catch {}
   }, [favorites]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('bc_notifications', JSON.stringify(notifications));
+    } catch {}
+  }, [notifications]);
 
   const setSimulatedTime = (timeStr: string | null) => {
     setSimulatedTimeState(timeStr);
@@ -788,13 +795,33 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
   };
 
   const markNotificationAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+    setNotifications((prev) => {
+      const updated = prev.map((n) => (n.id === id ? { ...n, read: true } : n));
+      try {
+        localStorage.setItem('bc_notifications', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const markAllNotificationsAsRead = () => {
+    setNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, read: true }));
+      try {
+        localStorage.setItem('bc_notifications', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   };
 
   const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    setNotifications((prev) => {
+      const updated = prev.filter((n) => n.id !== id);
+      try {
+        localStorage.setItem('bc_notifications', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   };
 
   // Automated meal time transition notification
@@ -838,6 +865,7 @@ export function CanteenProvider({ children }: { children: React.ReactNode }) {
         serveOrder,
         addNotification,
         markNotificationAsRead,
+        markAllNotificationsAsRead,
         deleteNotification,
         requestDeviceNotificationPermission,
       }}

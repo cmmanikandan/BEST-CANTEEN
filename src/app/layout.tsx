@@ -23,6 +23,7 @@ export const viewport: Viewport = {
 };
 
 import { PwaInstallPrompt } from '@/components/common/PwaInstallPrompt';
+import { AppInitializer } from '@/components/splash/AppInitializer';
 
 export default function RootLayout({
   children,
@@ -35,6 +36,7 @@ export default function RootLayout({
         <AuthProvider>
           <CanteenProvider>
             <CartProvider>
+              <AppInitializer />
               <PwaInstallPrompt />
               <main className="min-h-screen flex flex-col">
                 {children}

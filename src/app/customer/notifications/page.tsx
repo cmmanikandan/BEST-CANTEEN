@@ -8,13 +8,27 @@ import { Bell, ArrowLeft, X, ChevronRight } from 'lucide-react';
 
 export default function CustomerNotificationsPage() {
   const router = useRouter();
-  const { notifications, markNotificationAsRead, deleteNotification, requestDeviceNotificationPermission } = useCanteen();
+  const {
+    notifications,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    deleteNotification,
+    requestDeviceNotificationPermission,
+  } = useCanteen();
   const [devicePushEnabled, setDevicePushEnabled] = useState(true);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setDevicePushEnabled(Notification.permission === 'granted');
     }
+
+    // Automatically mark all notifications as seen when user visits the notifications screen
+    const timer = setTimeout(() => {
+      markAllNotificationsAsRead();
+    }, 600);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleOpenDetail = (n: any) => {
@@ -47,6 +61,16 @@ export default function CustomerNotificationsPage() {
             </p>
           </div>
         </div>
+
+        {unreadCount > 0 && (
+          <button
+            type="button"
+            onClick={markAllNotificationsAsRead}
+            className="text-xs font-bold text-[#FF5722] hover:text-orange-600 bg-orange-50 px-3 py-1.5 rounded-xl transition active:scale-95 shrink-0"
+          >
+            Mark all read
+          </button>
+        )}
       </div>
 
       {/* Device Push Notification Banner */}
