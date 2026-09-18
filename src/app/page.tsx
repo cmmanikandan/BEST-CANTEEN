@@ -21,15 +21,13 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BrandLogo } from '@/components/common/BrandLogo';
-import { MobileSplash } from '@/components/splash/MobileSplash';
-import { WebSplash } from '@/components/splash/WebSplash';
 
 export default function LandingPage() {
   const router = useRouter();
   const { user, role, isLoaded } = useAuth();
   const { foods, activeMealInfo } = useCanteen();
 
-  const [splashFinished, setSplashFinished] = React.useState(false);
+  const [checkingAuth, setCheckingAuth] = React.useState(true);
   const redirectTriggeredRef = React.useRef(false);
 
   // Synchronously check if credentials exist in localStorage with 0ms delay
@@ -66,28 +64,29 @@ export default function LandingPage() {
           ? '/server/dashboard'
           : '/customer/home';
 
-      // Keep splash screen steadily visible, then navigate directly to destination
-      const timer = setTimeout(() => {
-        router.replace(destination);
-      }, 1200);
-      return () => clearTimeout(timer);
+      // Logged in: Route directly to Dashboard
+      router.replace(destination);
     } else if (isLoaded && !user && !savedUser) {
-      // Guest: show splash screen steadily then transition to landing page
-      redirectTriggeredRef.current = true;
-      const timer = setTimeout(() => {
-        setSplashFinished(true);
-      }, 1400);
-      return () => clearTimeout(timer);
+      // Guest: not logged in -> reveal landing page immediately
+      setCheckingAuth(false);
     }
   }, [isLoaded, user, role, router]);
 
-  // WHILE SPLASH IS ACTIVE OR USER IS LOGGED IN:
-  // Render ONLY the Splash Screen. The landing page HTML is never rendered underneath.
-  if (!splashFinished || isUserLoggedIn) {
+  // WHILE CHECKING AUTH OR LOGGED IN (redirecting to dashboard):
+  // Render ONLY the clean "... loading" indicator. The landing page HTML is never rendered.
+  if (checkingAuth || isUserLoggedIn) {
     return (
-      <div className="fixed inset-0 z-50 overflow-hidden bg-[#FDFBF7]">
-        <MobileSplash isVisible={true} />
-        <WebSplash isVisible={true} />
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#FDFBF7]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#FF5722] animate-bounce [animation-delay:-0.3s]" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#FF5722] animate-bounce [animation-delay:-0.15s]" />
+            <span className="w-2.5 h-2.5 rounded-full bg-[#FF5722] animate-bounce" />
+          </div>
+          <span className="text-xs font-bold text-[#8C7E76] uppercase tracking-widest">
+            Loading...
+          </span>
+        </div>
       </div>
     );
   }

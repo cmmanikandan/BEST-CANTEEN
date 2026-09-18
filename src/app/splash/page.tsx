@@ -1,58 +1,36 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-
 import { useAuth } from '@/context/AuthContext';
 
 export default function SplashScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoaded } = useAuth();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (user) {
-        if (user.role === 'admin') router.push('/admin/dashboard');
-        else if (user.role === 'server') router.push('/server/dashboard');
-        else router.push('/customer/home');
-      } else {
-        router.push('/');
-      }
-    }, 1600);
+    if (!isLoaded) return;
 
-    return () => clearTimeout(timer);
-  }, [router, user]);
+    if (user) {
+      if (user.role === 'admin') router.replace('/admin/dashboard');
+      else if (user.role === 'server') router.replace('/server/dashboard');
+      else router.replace('/customer/home');
+    } else {
+      router.replace('/');
+    }
+  }, [router, user, isLoaded]);
 
   return (
-    <div className="fixed inset-0 min-h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-[#FDFBF7]">
-      {/* High-priority splash artwork */}
-      <Image
-        src="/splash-bg.png"
-        alt="Best Canteen Splash Screen"
-        fill
-        priority
-        sizes="100vw"
-        className="object-cover select-none pointer-events-none"
-        quality={90}
-      />
-
-      {/* Very subtle warm overlay for readability */}
-      <div className="absolute inset-0 bg-stone-900/5 backdrop-blur-[0.5px] pointer-events-none" />
-
-      {/* Steady Loading Indicator with ... animation and Loading... text */}
-      <div className="absolute bottom-10 inset-x-0 z-20 flex flex-col items-center justify-center gap-2">
-        <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/95 backdrop-blur-md border border-stone-200/80 shadow-md">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#FF5722] animate-pulse" />
-            <span className="w-2 h-2 rounded-full bg-[#FF5722] animate-pulse [animation-delay:200ms]" />
-            <span className="w-2 h-2 rounded-full bg-[#FF5722] animate-pulse [animation-delay:400ms]" />
-          </div>
-          <span className="text-xs font-bold text-[#201611] tracking-wide">
-            Loading...
-          </span>
+    <div className="fixed inset-0 min-h-screen w-full flex flex-col items-center justify-center bg-[#FDFBF7]">
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#FF5722] animate-bounce [animation-delay:-0.3s]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#FF5722] animate-bounce [animation-delay:-0.15s]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#FF5722] animate-bounce" />
         </div>
+        <span className="text-xs font-bold text-[#8C7E76] uppercase tracking-widest">
+          Loading...
+        </span>
       </div>
     </div>
   );
